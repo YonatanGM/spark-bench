@@ -2,6 +2,7 @@
   "scenes": [
     {
       "id": "garage",
+      "name": "Garage",
       "title": "Garage – High Detail Test",
       "author": "Ethan",
       "authorUrl": "https://superspl.at/user?id=ethan3111",
@@ -46,6 +47,7 @@
     },
     {
       "id": "tinyplanet",
+      "name": "Tiny Planet",
       "title": "Tiny Planet – Still Life",
       "author": "Stéphane Agullo",
       "authorUrl": "https://superspl.at/user/sa3d",

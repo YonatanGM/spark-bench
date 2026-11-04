@@ -1,4 +1,4 @@
-:root { color-scheme: dark; --panel: rgba(16, 19, 23, 0.92); --line: #2b3238; --text: #e6e9eb; --muted: #9aa5ad; --accent: #8fd3b0; --warn: #f2c46d; --bad: #ff8a80; }
+:root { color-scheme: dark; --panel: rgba(16, 19, 23, 0.92); --line: #2b3238; --text: #e6e9eb; --muted: #9aa5ad; --accent: #d7dce0; --warn: #f2c46d; --bad: #ff8a80; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0b0d10; color: var(--text); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -21,11 +21,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 .controls { display: grid; gap: 7px; padding-bottom: 4px; }
 .controls label { display: grid; gap: 3px; color: var(--muted); }
 .controls .row { display: flex; align-items: center; gap: 8px; }
+.controls .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 #stats h3 { margin: 8px 0 3px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 #stats .row { display: flex; justify-content: space-between; gap: 12px; }
 #stats .k { color: var(--muted); white-space: nowrap; }
 #stats .v { text-align: right; }
-.good { color: var(--accent); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+.warn { color: var(--warn); } .bad { color: var(--bad); }
 #credit { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
 #credit a { color: var(--text); }
 
@@ -38,7 +39,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 .load-card { width: min(380px, calc(100vw - 32px)); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
 #load-title { font-weight: 600; margin-bottom: 8px; }
 .bar { height: 6px; background: #22292f; border-radius: 3px; overflow: hidden; }
-#load-bar { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+#load-bar { height: 100%; width: 0; background: #c3cad0; transition: width .2s; }
 #load-bar.busy { width: 35%; animation: slide 1.2s infinite ease-in-out; }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
 #load-detail { margin-top: 8px; color: var(--muted); white-space: pre-line; font-variant-numeric: tabular-nums; }

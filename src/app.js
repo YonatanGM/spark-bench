@@ -32,7 +32,7 @@ const platform = isIos() ? "iOS" : isAndroid() ? "Android" : mobile ? "mobile" :
 // that run out of memory). Remember the stage so the next visit can report it.
 const PENDING = "splatbench.pending";
 const lastCrash = readStore(PENDING);
-const setStage = (s) => writeStore(PENDING, s === "rendering" ? null : { scene: sceneDef.title, stage: s });
+const setStage = (s) => writeStore(PENDING, s === "rendering" ? null : { scene: sceneDef.name, stage: s });
 setStage("downloading");
 
 // ---------------------------------------------------------------- three
@@ -115,7 +115,7 @@ const loading = $("loading");
 function fail(err) {
   console.error(err);
   loading.classList.add("error");
-  $("load-title").textContent = `Could not load ${sceneDef.title}`;
+  $("load-title").textContent = `Could not load ${sceneDef.name}`;
   $("load-detail").textContent = String(err?.message ?? err);
   setStage("error");
 }
@@ -146,7 +146,7 @@ let lodReady = false;
 
 // -------------------------------------------------------------- controls
 const sceneSelect = $("scene"), budget = $("budget"), custom = $("custom"), scale = $("scale");
-for (const s of catalog.scenes) sceneSelect.add(new Option(`${s.title} (${(s.splats / 1e6).toFixed(1)}M)`, s.id));
+for (const s of catalog.scenes) sceneSelect.add(new Option(`${s.name} (${(s.splats / 1e6).toFixed(1)}M splats)`, s.id));
 sceneSelect.value = sceneDef.id;
 sceneSelect.addEventListener("change", () => {
   writeStore(PENDING, null); // leaving on purpose, not a crash
@@ -209,7 +209,7 @@ function statSections(now) {
 
   const S = [];
   S.push(["Performance", [
-    ["FPS", String(last1), last1 >= 50 ? "good" : last1 >= 28 ? "warn" : "bad"],
+    ["FPS", String(last1), last1 >= 28 ? "" : "bad"],
     ["Frame time", avg ? `${avg.toFixed(1)} ms` : "n/a"],
     ["Slowest frame (2 s)", last2.length ? `${Math.max(...last2).toFixed(0)} ms` : "n/a"],
     ["Stutters over 50 ms (10 s)", String(stutters), stutters ? "warn" : ""],
@@ -267,11 +267,26 @@ function updateHud(now) {
   ).join("");
 }
 
+// Plain-text copy of the panel, for pasting into a message
+$("copy").addEventListener("click", async () => {
+  const lines = [`Splat Stress Test, ${new Date().toISOString()}`, `Scene: ${sceneDef.name}`, `Budget: ${budget.selectedOptions[0].text}${budget.value === "custom" ? ` ${num(Number(custom.value))}` : ""}, LOD scale ${spark.lodSplatScale.toFixed(1)}x`];
+  for (const [title, rows] of statSections(performance.now())) {
+    lines.push("", title);
+    for (const [key, value] of rows) lines.push(`${key}: ${value}`);
+  }
+  lines.push("", `User agent: ${navigator.userAgent}`, location.href);
+  const text = lines.join("
+");
+  try { await navigator.clipboard.writeText(text); $("copy").textContent = "Copied"; }
+  catch { prompt("Copy these stats", text); }
+  setTimeout(() => ($("copy").textContent = "Copy stats"), 1500);
+});
+
 function updateLoading(now) {
   if (t.firstFrame || loading.classList.contains("error")) return;
   const bar = $("load-bar");
   if (!t.downloaded) {
-    $("load-title").textContent = `Downloading ${sceneDef.title}`;
+    $("load-title").textContent = `Downloading ${sceneDef.name}`;
     $("load-detail").textContent = `${mb(downloadedBytes)} of ${mb(source.bytes)}`;
     bar.classList.remove("busy");
     bar.style.width = `${Math.round((100 * downloadedBytes) / source.bytes)}%`;
