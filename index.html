@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <title>Splat Stress Test</title>
+  <title>Spark Test</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="src/styles.css">
   <script type="importmap">
@@ -60,6 +60,14 @@
     </div>
   </div>
 
+  <script>
+    // Show startup errors (including script parse errors) instead of a stuck "Starting" screen.
+    window.addEventListener("error", (e) => {
+      if (window.splatBench) return;
+      document.getElementById("load-title").textContent = "The app failed to start";
+      document.getElementById("load-detail").textContent = e.message || "Script error";
+    });
+  </script>
   <script type="module" src="src/app.js"></script>
 </body>
 </html>

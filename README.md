@@ -1,4 +1,4 @@
-# Splat Stress Test
+# Spark Test
 
 Open a large Gaussian splat scene on any phone, tablet or computer and see how it runs. Built on [Spark](https://sparkjs.dev) 2.4.0 and three.js r180.
 

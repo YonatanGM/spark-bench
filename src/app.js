@@ -1,4 +1,4 @@
-// Splat stress test on Spark 2.4.0. Setup follows the official examples
+// Spark test viewer on Spark 2.4.0. Setup follows the official examples
 // (copies in reference/spark-2.4.0/examples):
 // - SparkRenderer in the scene, one SplatMesh            (hello-world)
 // - load without LOD, then createLodSplats(), enableLod  (lod-on-demand)
@@ -269,14 +269,13 @@ function updateHud(now) {
 
 // Plain-text copy of the panel, for pasting into a message
 $("copy").addEventListener("click", async () => {
-  const lines = [`Splat Stress Test, ${new Date().toISOString()}`, `Scene: ${sceneDef.name}`, `Budget: ${budget.selectedOptions[0].text}${budget.value === "custom" ? ` ${num(Number(custom.value))}` : ""}, LOD scale ${spark.lodSplatScale.toFixed(1)}x`];
+  const lines = [`Spark Test, ${new Date().toISOString()}`, `Scene: ${sceneDef.name}`, `Budget: ${budget.selectedOptions[0].text}${budget.value === "custom" ? ` ${num(Number(custom.value))}` : ""}, LOD scale ${spark.lodSplatScale.toFixed(1)}x`];
   for (const [title, rows] of statSections(performance.now())) {
     lines.push("", title);
     for (const [key, value] of rows) lines.push(`${key}: ${value}`);
   }
   lines.push("", `User agent: ${navigator.userAgent}`, location.href);
-  const text = lines.join("
-");
+  const text = lines.join("\n");
   try { await navigator.clipboard.writeText(text); $("copy").textContent = "Copied"; }
   catch { prompt("Copy these stats", text); }
   setTimeout(() => ($("copy").textContent = "Copy stats"), 1500);
