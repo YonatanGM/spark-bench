@@ -1,0 +1,102 @@
+{
+  "reportIssueUrl": "https://github.com/YonatanGM/spark-bench/issues/new",
+  "scenes": [
+    {
+      "id": "garage",
+      "title": "Garage – High Detail Test",
+      "author": "Ethan",
+      "authorUrl": "https://superspl.at/user?id=ethan3111",
+      "sourceUrl": "https://superspl.at/scene/8f4d8e05",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "splats": 13943336,
+      "shDegree": 1,
+      "rotationDeg": [
+        0,
+        0,
+        180
+      ],
+      "camera": {
+        "position": [
+          -0.3149624168872833,
+          -0.052216604351997375,
+          1.7624859809875488
+        ],
+        "target": [
+          0.6955750095322375,
+          0.9618799795943376,
+          -10.271683260942678
+        ],
+        "fov": 80
+      },
+      "moveSpeed": 1.5,
+      "bench": {
+        "type": "walk",
+        "yawDeg": 55,
+        "pitchDeg": 8,
+        "distance": 1.6
+      },
+      "sources": [
+        {
+          "id": "sog",
+          "label": "SOG · SuperSplat export (187 MB)",
+          "fileName": "garage.sog",
+          "bytes": 187142352,
+          "parts": [
+            "scenes/garage/garage.sog.part00",
+            "scenes/garage/garage.sog.part01",
+            "scenes/garage/garage.sog.part02",
+            "scenes/garage/garage.sog.part03"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tinyplanet",
+      "title": "Tiny Planet – Still Life",
+      "author": "Stéphane Agullo",
+      "authorUrl": "https://superspl.at/user/sa3d",
+      "sourceUrl": "https://superspl.at/scene/d59f99ee",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "splats": 5099897,
+      "shDegree": 2,
+      "rotationDeg": [
+        0,
+        0,
+        180
+      ],
+      "camera": {
+        "position": [
+          27.623300552368164,
+          14.444024085998535,
+          9.088884353637695
+        ],
+        "target": [
+          -0.007937908172607422,
+          0.005388259887695313,
+          0.004260063171386719
+        ],
+        "fov": 120
+      },
+      "moveSpeed": 8,
+      "bench": {
+        "type": "orbit",
+        "yawDeg": 70,
+        "dolly": 0.45
+      },
+      "sources": [
+        {
+          "id": "sog",
+          "label": "SOG · SuperSplat export (74 MB)",
+          "fileName": "tinyplanet.sog",
+          "bytes": 74104156,
+          "parts": [
+            "scenes/tinyplanet/tinyplanet.sog.part00",
+            "scenes/tinyplanet/tinyplanet.sog.part01"
+          ]
+        }
+      ]
+    }
+  ]
+}

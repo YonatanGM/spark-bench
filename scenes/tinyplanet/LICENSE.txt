@@ -1,0 +1,8 @@
+This license applies to the included splat asset files in public/splat.
+
+Title: TINY PLANET – STILL LIFE
+Author: Stéphane Agullo (https://superspl.at/user/sa3d)
+Source: https://superspl.at/scene/d59f99ee
+License: CC Attribution (Creative Commons Attribution)
+License URL: http://creativecommons.org/licenses/by/4.0/
+Requirements: Author must be credited. Commercial use is allowed.

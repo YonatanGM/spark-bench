@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Spark Splat Bench</title>
+  <meta name="description" content="Gaussian splat stress test built on Spark 2.4: live FPS, frame times, LOD budget controls and a shareable benchmark report.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="src/styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.min.js",
+        "three/addons/": "./vendor/three/addons/",
+        "@sparkjsdev/spark": "./vendor/spark/spark.module.min.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="canvas" tabindex="0" aria-label="3D splat view"></canvas>
+
+  <section id="hud" aria-label="Live metrics" aria-live="off">
+    <button id="hud-toggle" type="button" title="Show or hide details">
+      <span id="hud-fps">— FPS</span><span id="hud-brief"></span><span class="chev" aria-hidden="true">▾</span>
+    </button>
+    <div id="hud-body"></div>
+  </section>
+
+  <div id="credit"></div>
+
+  <div id="banner" hidden></div>
+
+  <div id="loading" role="status">
+    <div class="load-card">
+      <div id="load-title">Starting…</div>
+      <div class="bar"><div id="load-bar"></div></div>
+      <div id="load-detail"></div>
+    </div>
+  </div>
+
+  <button id="settings-toggle" type="button" aria-expanded="false" aria-controls="panel">Settings</button>
+
+  <aside id="panel" hidden aria-label="Settings">
+    <div class="panel-head">
+      <strong>Settings</strong>
+      <button id="panel-close" type="button" aria-label="Close settings">✕</button>
+    </div>
+
+    <fieldset>
+      <legend>Scene</legend>
+      <label>Scene <select id="scene-select"></select></label>
+      <label>File <select id="source-select"></select></label>
+      <label title="SplatMesh lod option: Spark builds the LOD tree in a worker after download">LOD tree
+        <select id="lodmode-select">
+          <option value="quick">Build in browser · quick (Spark default)</option>
+          <option value="quality">Build in browser · quality (slower)</option>
+          <option value="none">None · render every splat</option>
+        </select>
+      </label>
+      <label class="check" title="SplatMesh nonLod option: keeps the original splats next to the LOD tree, so LOD can be switched off live. Costs extra memory."><input id="keep-original" type="checkbox"> Keep original too (live LOD on/off, more memory)</label>
+      <p id="load-warning" class="warn" hidden></p>
+      <button id="load-button" type="button">Load (reloads page)</button>
+    </fieldset>
+
+    <fieldset id="lod-fieldset">
+      <legend>Level of detail</legend>
+      <label class="check" id="lod-enabled-wrap"><input id="lod-enabled" type="checkbox" checked> LOD on</label>
+      <label>Base budget
+        <select id="budget-select">
+          <option value="auto">Auto</option>
+          <option value="250000">250k</option>
+          <option value="500000">500k</option>
+          <option value="1000000">1M</option>
+          <option value="1500000">1.5M</option>
+          <option value="2500000">2.5M</option>
+          <option value="5000000">5M</option>
+          <option value="10000000">10M</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <label id="budget-custom-wrap" hidden>Custom base <input id="budget-custom" type="number" min="10000" max="50000000" step="10000" inputmode="numeric"></label>
+      <label>LOD scale <span class="row"><input id="scale" type="range" min="0.1" max="4" step="0.1"><output id="scale-out"></output></span></label>
+      <label title="SparkRenderer.lodRenderScale: smallest on-screen splat size the LOD selects, in pixels">Min splat size <span class="row"><input id="minpx" type="range" min="1" max="5" step="0.5"><output id="minpx-out"></output></span></label>
+      <label>Foveation
+        <select id="fov-select">
+          <option value="default">Spark default (sharper in front)</option>
+          <option value="off">Off (uniform)</option>
+          <option value="strong">Strong (cheaper at edges)</option>
+        </select>
+      </label>
+      <p class="note">Effective budget = base × scale. It is a ceiling: the LOD can select fewer splats.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Rendering</legend>
+      <label>Pixel ratio <span class="row"><input id="dpr" type="range" min="0.25" step="0.05"><output id="dpr-out"></output></span></label>
+      <label title="SparkRenderer.maxStdDev: how far each Gaussian's quad extends. Smaller = less overdraw. Spark docs suggest √5 for VR.">Splat footprint
+        <select id="stddev-select">
+          <option value="2.8284">√8 · Spark default</option>
+          <option value="2.2361">√5 · cheaper, near-identical</option>
+          <option value="2">2 · cheapest, slightly harder edges</option>
+        </select>
+      </label>
+      <label>Field of view <span class="row"><input id="fov" type="range" min="30" max="120" step="1"><output id="fov-out"></output></span></label>
+      <label>Move speed <span class="row"><input id="speed" type="range" min="0.1" max="4" step="0.1" value="1"><output id="speed-out"></output></span></label>
+      <label class="check"><input id="joystick" type="checkbox"> On-screen joystick</label>
+      <button id="reset-view" type="button">Reset view</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Benchmark</legend>
+      <p class="note">Flies a fixed 15 s camera path after a 2 s settle, then shows a report you can copy or download.</p>
+      <button id="bench-button" type="button" class="primary">Run benchmark</button>
+      <button id="snapshot-button" type="button">Report current state</button>
+      <button id="share-button" type="button">Copy link with these settings</button>
+    </fieldset>
+
+    <p class="note small" id="versions"></p>
+    <p class="note small">Controls: drag to look · WASD / arrows to move · Shift = 5× speed · scroll to move. Touch: drag to look, two fingers to move, or the joystick.</p>
+  </aside>
+
+  <dialog id="report">
+    <form method="dialog" class="report-card">
+      <div class="panel-head"><strong id="report-title">Report</strong><button value="close" aria-label="Close report">✕</button></div>
+      <div id="report-summary"></div>
+      <textarea id="report-json" readonly spellcheck="false" aria-label="Report JSON"></textarea>
+      <div class="report-actions">
+        <button id="report-copy" type="button" class="primary">Copy JSON</button>
+        <button id="report-download" type="button">Download</button>
+        <a id="report-issue" target="_blank" rel="noopener" hidden>Open GitHub issue</a>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

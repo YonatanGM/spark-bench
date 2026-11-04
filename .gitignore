@@ -1,0 +1,6 @@
+# Raw downloads (PLY up to 1.2 GB, vite exports) stay local
+downloads/
+node_modules/
+tools/check_out/
+__pycache__/
+*.log

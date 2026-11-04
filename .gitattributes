@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.part[0-9][0-9] binary
+*.sog binary
+*.png binary
+*.gif binary

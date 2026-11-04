@@ -1,0 +1,8 @@
+This license applies to the included splat asset files in public/splat.
+
+Title: Garage - High Detail Test
+Author: Ethan (https://superspl.at/user/ethan3111)
+Source: https://superspl.at/scene/8f4d8e05
+License: CC Attribution (Creative Commons Attribution)
+License URL: http://creativecommons.org/licenses/by/4.0/
+Requirements: Author must be credited. Commercial use is allowed.

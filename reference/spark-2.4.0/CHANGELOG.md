@@ -1,0 +1,319 @@
+## 2.4.0 (Oct 19, 2026)
+
+Bug fixes and improvements
+
+### Enhancements
+
+- Add SPZ v4 read support (#484) (@udwinj, @mrxz) 
+- Decouple and abstract paged splat load logic from `PagedSplat` into `FetchSource` that retrieves data from in-memory file, URL or any other custom mechanism (#463) (@mrxz, @xohm
+, @oscarlorentzon)
+- Switch to `flate2` from `zlib-rs` backend for RAD deflate compression. ~50% faster compression, ~2-5% smaller outputs and ~20% faster decoding (#474) (@mrxz, @oscarlorentzon)
+- Replace `miniz_oxide` with `flate2` for Gzip (de)compression of SPZ files. Remove `miniz_oxide` as dependency (#485) (@mrxz)
+- Address stutter during animations. Skip unnecessary splat sortings if the splat buffer needs or has changed like for example when LoD levels change or splats animate / move (#347) (#460) (@oscarlorentzon, @mrxz)
+- Refactor `PagedSplats` into its own separate file (#462) (@mrxz)
+- Remove outdated Github workflows CI commands (#464) (@mrxz)
+- Add Rust linter (#414) (@mrxz)
+- Improve tests (#483, #482) (@mrxz)
+- Improve docs (#478) (@oscarlorentzon)
+
+### Bug Fixes
+
+- (WebXR) Use camera projection projection matrix to calculate LoD pixel limit. The THREE.Camera fov value was incorrectly used before: It doesn't match the one reported by the WebXR API (#488) (@oscarlorentzon)
+- Adress view-dependent color precission loss due to unwanted SH coefficinets clamping (#465) (@oscarlorentzon) 
+- Dispose the LoD index textures when renderer is disposed (#479) (@oscarlorentzon)
+- Fix issue with Level 3 Spherical Harmonics (sh3) dropped due to incorrect type assertions. It introduces explicit types in `PackedSplats` and `ExtSplats` instead of loose types + assertions. (#467) (@mrxz, @oscarlorentzon)
+- (WebXR) Fix issue with splat size and anti-alias blur rendered at half the correct width. Use whole viewport width for calculations instead of half (#487) (@oscarlorentzon)
+- Ignore errors / rejections after `SparkRenderer` is disposed. This can happen when for instance there's pending LoD sorting in parallel in the worker when the renderered is disposed (#476) (@oscarlorentzon)
+- Replace workers that hit a fatal error / crash / trap. The pool tried to reuse those in a broken state (#480) (@oscarlorentzon)
+- Fix issue with long thin splats drawn off axis, too wide or too narrow. Compute 2D covariance eigenvectors without cancellation (#486) (@oscarlorentzon)
+- Stop retrying a failed level of detail tree on every update (#477) (@mrxz, @oscarlorentzon)
+- Address raycasting precission and speed issues (#469) (@n3ur0m4n, @oscarlorentzon)
+
+
+
+## 2.3.1 (Oct 1, 2026)
+
+Fix builds
+
+
+## 2.3.0 (Sep 29, 2026)
+
+Bug fixes and improvements
+
+
+### Enhancements
+
+- Fix / Enable on-demand rendering: Render a frame only when explicitly requested (#449, #451, #452) (fix #298) (@asundqui, @onderilkesever, @mrxz, @oscarlorentzon)
+- Make members of SplatEncoding non-optional to avoid repeated fallback handling (#415) (@mrxz)
+- Tree shaking improvements by focussing on classes that users might not need or use. (#417) (@mrxz)
+- Update dev dependencies: TypeScript and Vite, use Vitest for tests (#445) (@mrxz)
+- Use `instanceof` instead of `isTexture` flag for THREE.js type checking (#446) (@oscarlorentzon
+)
+- Add typechecking to CI (#427) (@oscarlorentzon)
+- Take extended splats (`ExtSplats`) when writing SPZ. `writeSpz` only took `PackedSplats` (#440) (@oscarlorentzon)
+- Accept cookie and header options when loading splats (#459) (@oscarlorentzon)
+- Use the calling renderer's encoding for its splats. Fix issue when using two `SparkRenderers` as when rendering two different viewpoints simultaneously (#453) (@oscarlorentzon)
+- Run the Rust tests in Linux CI (#444) (@oscarlorentzon)
+- Docs improvements (@mrxz, @oscarlorentzon, @mrxz)
+- Improve tests (@mrxz, @oscarlorentzon, @mrxz)
+
+### Bug Fixes
+
+- Fix a GPU resource memory leak. Dispose geometry and material in `SparkRenderer.dispose()` (#410) (@ArisLiWind, @mrxz)
+- Fix references to repo URL (#426) (@oscarlorentzon)
+- Write non-finite SPZ rotations as the identity. Issue when writting SPZ v3 (#454) (@oscarlorentzon)
+- Allocate missing SH3 data texture for paged ext splats. Addresses `RangeError: offset is out of bounds` error (#424) (@oscarlorentzon)
+- Await WebAssembly initialization and check sh degress in `transcodeSpz` (#438) (fix #437) (@mrxz)
+- Await for WebAssembly initialization before writing SPZ (#448) (@oscarlorentzon)
+- Make built-in controls rotate around the controlled object's up axis instead of world y axis (#434) (fix #300) (@dev-xdh, @oscarlorentzon)
+- Read and apply maxSh passed in PagedSplats options. Previously ignored and SplatPager limit applied instead (#447) (@oscarlorentzon)
+- Fix wrong raycaster direction for pinch and press movement under a rotated parent (#435) (@oscarlorentzon)
+- Controls: Skip pointer frames that took no time (#436) (@oscarlorentzon)
+- Apply default encoding when none is given when writting `PackedSplats` (#439) (@oscarlorentzon)
+- Make rotation speed of keys and gamepad (XR controllers) consistent (#442) (@oscarlorentzon)
+- Regression. Restore v3 as the default version when outputting SPZ format (#441) (@oscarlorentzon)
+- Cancel scheduled work (spark updates, splat sorting) when disposing the renderer (#450) (@oscarlorentzon)
+
+
+
+## 2.2.0 (Sep 11, 2026)
+
+Bug fixes and polish
+
+### Enhancements
+
+- Allow people to install the pre-built bundles from the repository directly without having to have the Rust toolchain setup on their machines (#354) (@mrxz)
+- Experimental (opt-in) faster LoD splat traversal algorithm (#344) (@asundqui, @mrxz)
+- Set provoking vertex to first explicitly if WEBGL_provoking_vertex extension is available. FPS perf gains up to 14% in some systems / configurations (#357) (@mrxz, @asundqui)
+- Clean up. Remove OldSparkRenderer and related classes (#322) (@mrxz)
+- Infer `encodeLinear` from the current render target instead of explicitly set (#360) (@mrxz)
+- Combine spark-worker-rs and spark-rs into one. Wasm blob is now embedded once and WASM module is compiled only once. (#335) (@mrxz)
+- Improve splat sorting. Up to ~20% faster (#327) (@39ali, @mrxz, @asundqui)
+- Prevent superfluous initial data upload to GPU (#358) (@mrxz, @asundqui)
+- Add WASM build step to CI dist build. (#377) (@mrxz)
+- Fix issue where Spark continues fetching and decoding the LoD chunks of the old scene after scene changes (fix #384) (#392) (@mrxz, @ChiefGnome, @ayamflow)
+- Handle `preUpdate` ahead of updating material uniforms to avoid 1 frame latency (fixes #390) (#391) (@mrxz, @peterreeves)
+- Add `gsplatXaxis`, `gsplatYAxis` and `gsplatZAxis` helper dynos indicating unit vector along splat axis (#419) (@asundqui, @oscarlorentzon)
+- Opt-in parameters to omit splat formats, splat representations and LOD generation methods from the WASM blob reducing its size (@mrxz, @asundqui) (#418)
+- Add `rust/`` folder to `build-dist.yml` paths (#412) (@mrxz)
+- Use type information of rpcHandlers for worker.call (#379) (@mrxz)
+- Call super.dispose() in Object3D subclasses for THREE.js r186+ (#413) (@mrxz)
+- Remove JS based splat file format decoders in favor ot Rust ones (#374) (@mrxz)
+- Add GLSL langauge hint before shader string literals for code editor syntax higlighting (@mrxz) (#416)
+- Unify logic to push data into decoder around `ReadableStream` (#380) (@mrxz)
+- Docs Improvements (@mrxz, @dmarcos)
+
+### Bug Fixes
+
+- Fix unspecified license ot rust code (#422) (@arslantariq-threshold)
+- Adress Rust compiler warnings (#361) (@mrxz)
+- Replace THREE.Clock (deprecated in THREE r183+) with THREE.Timer (#378) (@mrxz)
+- Replace explicit WebGL calls with equivalent `uploadU32DataTextureRows` call. Makes WebGL state consisten (fix #405) (#406) (@sawa-zen, @mrxz)
+- Fix RangeError when all SH arrays are present (#404) (@marwie, @mrxz)
+- Use uploadU32DataTextureRows for LoD index uploads (fix #405) (#406) (@sawa-zen, @mrxz)
+- Pass fileType to SplatPager when constructing SplatMesh (fix #363) (#365) (@mrxz, @fuxy-clude)
+- Prevent unclamped negative colors become NaN making splats render black (fix #386) (#387) (@viethungle0503, @mrxz)
+- Restore `pixelStorei` value since THREE r184+ now caches it (fix #366) (#367) (@mrxz, @Huciko)
+- Fix envmap regression. Save and restore activeCubeFace and activeMipmapLevel when rendering to render target (#315) (@mrxz)
+- Fix build-lod SH degree clamping logic (fix #352) (#359) (@asundqui, @mrxz)
+
+
+
+## 2.1.0 (Apr 18, 2026)
+
+Bug fixes and adjustments post 2.0.0 release.
+
+### Enhancements 
+
+- Support plain x/y/z/r/g/b point clouds in ply files (#340) (@mrxz)
+- Implement forEachSplat and getBoundingBox for PagedSplats (#324) (@mrxz)
+- Specify 0.180.0 or higher as Three.js peer dependency (#309) (@mrxz)
+
+### Bug Fixes
+
+- Rename packed to packedData as Chrome 149 onwards considers it a reserved keyword (#351) (@mrxz)
+- Remove spark-internal-rs from biome.json ignore list (#350) (@mrxz)
+- Fix issue when premultipliedAlpha cannot longer be changed on the fly (#331) (@mrxz)
+- Fix problem when loading CloudCompare-exported binary PLY files (#338) (@mrxz)
+- Address memory leak by clearing texture references so can be GCed (#326) (@mrxz)
+- Fix examples importmaps (@mrxz, @dmarcos)
+- Docs Improvements (@mrxz, @dmarcos, @mikeyzhong)
+
+
+## 2.0.0 (Apr 14, 2026)
+
+Spark 2.0 is a major release that adds a Level-of-Detail (LoD) system for 3DGS, enabling huge worlds to be rendered on the web on any device, with progressive streaming, virtual splat paging, and higher precision storage. It remains mostly backward compatible with 0.1 apps.
+
+### New features
+
+- New `SparkRenderer` that supports rendering multiple LoD splat trees computed according to max splat counts, minimum screen-space size, and camera foveation. Also supports rendering splats from a virtual paging system, extended precision encoding. New options for custom render targets and overriding material properties including custom shaders and uniforms.
+- Tunable LoD rendering: max splat count tunable with `SparkRenderer.lodSplatCount` and `.lodSplatScale`, minimum detail with `.lodRenderScale`, foveation parameters using `.coneFov0`, `.coneFov`, `.coneFoveate`, and `.behindFoveate`. Individual meshes tunable using `SplatMesh.lodScale`, `.coneFov(0)`, `.coneFoveate`, and `.behindFoveate`.
+- New splat file format `.RAD` (RADiance field) that supports custom field encoding, columnar storage and compression, and chunked random access, enabling progressive loading and streaming of huge 3DGS scenes.
+- Two 3DGS downsampling algorithms: `tiny-lod` for generating LoD splat trees on-demand in the browser after loading, and `bhatt-lod` for higher-quality LoD splat tree generation in an offline setting. Both algorithms can be run in the browser or from the `build-lod` cmdline tool.
+- On-demand LoD splat creation using `new SplatMesh({ lod: true })` and `SplatMesh.createLodSplats`, and instant toggling between LoD and non-LoD versions of the splats using `SplatMesh.enableLod`.
+- Virtual splat paging system `SplatPager` to preallocate GPU buffers shared across splat objects, loaded across the network in order prioritized by the viewpoint, managed in LRU fashion.
+- High-precision splat encoding in `ExtSplats` that mirrors `PackedSplats` and alleviates most precision issues. High precision usage selectable using `SplatMesh.extSplats`,`SparkRenderer.pagedExtSplats`, and `.accumExtSplats`.
+- Multiple viewport rendering using multiple `SparkRenderer`, generalizing viewport rendering to encompass different scenes, splats, and shader effects between renders.
+
+### Enhancements
+
+- Huge file loading support from `ReadableStream`, enabling multi-GB splat files from URLs or local drag-and-drop without first allocating a full `Uint8Array`.
+- Chainable splat Dyno modifiers using `SplatMesh.objectModifiers` and `.worldModifiers` arrays.
+- New `SparkXr` wrapper for AR / VR experiences
+
+### Breaking changes
+
+- Apps must now explicitly create a `SparkRenderer` and add it to the scene. Spark no longer automatically injects one because it would sometimes result in multiple renderers within the scene.
+- Multiple viewpoints now use multiple `SparkRenderer` instances instead of `spark.newViewpoint()`, and sorting options are configured directly on each renderer.
+- Spark 2.0 requires THREE.js r179 or newer, replaces `VRButton` with `SparkXr`, and replaces `SparkRenderer.getRgba()` / `.readRgba()` workflows with generator-based RGBA rendering.
+- `OldSparkRenderer` and related `Old*` classes are available as temporary fallbacks for code that still depends on the 0.1 renderer model.
+
+### Deprecations
+
+- Deprecated the experimental stochastic sort-free rendering mode.
+- Deprecated splat texture support for arbitrary per-splat RGBA texture profiles.
+
+
+## 0.1.10 (Oct 24, 2025)
+
+[SOG v2](https://blog.playcanvas.com/playcanvas-open-sources-sog-format-for-gaussian-splatting/) support, new examples and bug fixes
+
+### Enhancements
+
+- SOGSv2 (SOG) compression format support (#179) (@mrxz)
+- Use DecompressionStream for decompressing .spz files for faster loading times (#181) (@mrxz)
+- Make WASD default control for viewer (#6d7d801) (@dmarcos)
+- Add `minPixelRadius` property to discard splats during vertex shader (#184) (@mrxz)
+- Docs enhancements (@querielo)
+- Interactive holes example (#189) (@kali-shade)
+- Interactive ripples effect (#194) (@kali-shade)
+- Support logarithmic depth buffer (#199) (@Philipp-M)
+
+### Bug fixes
+
+- Issue preventing the splats from being updated when they should. (#191) (@mrxz)
+- Make bash script conform to "standard" (#197) (@Philipp-M)
+- Fix issue with splats rendered at incorrect position for a few frames (#200) (fix #192, #193) (@mrxz)
+
+## 0.1.9 (Sep 22, 2025)
+
+Performance improvements, SPZ v3 support, new splat transition and reveal effects, brush painting / erasing splat example.
+
+### Enhancements
+
+- New splat transition effects (#172) (@kali-shade)
+- New splat reveal effects (#153, #149) (@kali-shade)
+- Add support for SPZ v3 (fix #151) (#171) (@gwegash, @dmarcos)
+- Reduce small memory allocations when loading ply files (#147) (@mrxz)
+- Improve .ply parsing speed using compiled parser function (#150) (@mrxz)
+- Add support for ortographic rendering (#157) (@mrxz)
+- Make sure all examples resize when the window is resized (#155) (@mrxz)
+- Call gl.flush() to encourage eager execution. SparkRenderer.updateInternal was not immediately executed (#156) (@mrxz)
+- Use child mesh in `SplatMesh` to auto-inject `SparkRenderer` instead of monkey-patching (#158) (@mrxz)
+- Pre-compute lookup tables when parsing SOGS files (#159) (@mrxz)
+- Avoid allocating THREE.Quaternion instances in `setPackedSplat` (#160) (@mrxz)
+- Use native `Float16Array` to encode a number as a float16 if available. (#161) (@mrxz)
+- Splat brush painting / brush erasing example (#165) (@winnie1994)
+
+## 0.1.8 (July 31, 2025)
+
+Bug fix + SplatMesh bounding box calculation.
+
+### Bug fixes
+
+- Fix SH encoding scale factors (#142) (@asundqui, @mrxz, @heimeii)
+- Calculate a SplatMesh's bounding box! `SplatMesh.getBoundingBox()` (#126) (@winnie1994)
+
+## 0.1.7 (July 30, 2025)
+
+Image quality and performance improvements.
+
+### Enhancements
+
+- Customizable splat encoding ranges (rgb, sh1, sh2, sh3) for wider range of colors and scales support improving contrast and color reproduction. Expose `premultipliedAlpha` flag to use when accumulating splat RGB (#134) (@asundqui)
+- [Experimental Stochastic splat ordering option](https://sparkjs.dev/examples/stochastic/). Faster rendering since sorting no longer needed but with some visual quality tradeoffs (#8f5596e) (@asundqui)
+- Higher precision mode (float32) for splat sorting in addition to the default one (float16). Addresses z-fighting issues between splats (@asundqui, @mrxz) (#129)
+- Allow decoding and parsing of SOGS images to happen in parallel (@mrxz) (#122)
+- New [splat shaders effect example](http://sparkjs.dev/examples/splat-shader-effects) (#141) (@kali-shade)
+- Expose `minAlpha` and `maxPixelRadius` in the [SparkRenderer](https://sparkjs.dev/docs/spark-renderer/) parameters (#130) (@asundqui)
+- Tree-shaking on worker code (@mrxz) (#118)
+- Add JSDocs to docs (@mrxz) (#123)
+- Use THREE.js built-in [full screen quad](https://github.com/mrdoob/three.js/blob/95febf473cc326ac2029c51442b2fea3348c5321/examples/jsm/postprocessing/Pass.js#L138) instead of custom setup to cover the entire render target (@mrxz) (#121)
+- Redunce bundle size by removing `anyhow::anyhow` dependency (#127) (@asundqui)
+
+### Deprecations
+
+- Remove `SparkRenderer` blending parameter. Rely instead on `THREE.js` built-in support for `premultipliedAlpha` that sets the right blending mode automatically (#136) (@mrxz)
+
+
+## 0.1.6 (July 11, 2025)
+
+Visual quality improvements, .zip sogs file support, bug fixes.
+
+### Enhancements
+
+- Can load [SOGS](https://blog.playcanvas.com/playcanvas-adopts-sogs-for-20x-3dgs-compression/) compressed splats packaged in a .zip file (#100) (@asundqui)
+- Rename `SparkRenderer` renderScale parameter to [focalAdjustment](https://sparkjs.dev/docs/spark-renderer/#optional-parameters) (#113) (fix #99) (@asundqui, @mrxz)
+- Use OffscreenCanvas and WebGL2 context to decode webp SOGS images instead of 3rd party dependency (#90) (@mrxz)
+- [Animated transitions between splats example](https://sparkjs.dev/examples/splat-transitions/) (#69) (@winnie1994)
+- [Example of loading a SOGS compressed splat](https://sparkjs.dev/examples/sogs/) (@dmarcos, @vincentwoo, @61cygni)
+- Expand value range of internal splat encoding to improve visual quality. Lower zero cut-off to retain and render small splats. (#110) (@asundqui, @mrxz)
+
+### Bug fixes
+
+- Fix visible property of SplatMesh not having effect. (fix #77) (#100) (@asundqui, @cyango)
+- Add missing sh1 and sh2 support to SOGS compressed support (fix #108) (#109) (@lucasoptml)
+- Prevent unintentional reuse of ArrayBuffer on concurrent file requests or hits to THREE.Cache. Replace use of THREE.FileLoader with fetch API (#94, #112) (fix #93) (@mrxz, @asundqui)
+
+
+## 0.1.5 (July 1, 2025)
+
+Visual quality improvements and [SOGS](https://blog.playcanvas.com/playcanvas-adopts-sogs-for-20x-3dgs-compression/) support
+
+### Enhancements
+
+- Add support for [SOGS](https://blog.playcanvas.com/playcanvas-adopts-sogs-for-20x-3dgs-compression/) compression format 3D Gaussian Splatting (#73) (@asundqui)
+- Change splat shapes by using any RGBA texture to compute the Gaussian falloff (#79) (@asundqui)
+- Use RenderTarget properties to reduce manual render state tracking (#80) (@mrxz)
+
+### Bug fixes
+
+- Visual quality, Fix .ksplat decoding (fix #66) (@asundqui)
+- Visual quality, Fix Spherical Harmonics not included in SPZ transcoding (fix #66) (#83) (@asundqui)
+- Visual quality, Fix incorrect calculation of renderer size. Especially improves rendering in high DPI displays (#71) (@mrxz)
+- Fix support of compressed .ply files exported from SuperSplat. Newer versions include min/max_r/g/b properties in the header that were not parsed (#82) (@asundqui)
+
+## 0.1.4 (June 24, 2025)
+
+### Enhancements
+
+- Ability to render depth and normal values (#58) (@asundqui)
+- New parameters to change renderer focal distance and aperture angle (#59) (@asundqui)
+- GLSL code injection example (#56)
+- WebXR example (#50)
+
+### Bug fixes
+
+- Option to disable SparkControls camera roll for touch controls (fix #46) (#60) (@asundqui)
+- Fix sign in SH2 coefficient signs improving visual quality (#64)
+
+## 0.1.3 (June 11, 2025)
+
+Fix types export in npm package.
+
+## 0.1.2 (June 10, 2025)
+
+It removes unnecessary dependencies from npm package.
+
+## 0.1.1 (June 10, 2025)
+
+### Bug fixes
+
+- Fix compressed .ply files by gsplat not loading (#34) (@bolopenguin, @asundqui)
+- Fix image quality rendering with mostly transparent splats (#36) (@hybridherbst, @@asundqui)
+- Fix SplatMesh not rendering when it's a child of an Object3D (#38) (@dmarcos)
+
+
+## 0.1.0 (June 2, 2025)
+
+First release

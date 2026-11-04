@@ -1,0 +1,14 @@
+{
+  "name": "spark-bench",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Gaussian splat stress test built on Spark (sparkjs.dev)",
+  "scripts": {
+    "vendor": "node tools/vendor.mjs",
+    "serve": "python tools/serve.py 8770"
+  },
+  "dependencies": {
+    "@sparkjsdev/spark": "2.4.0",
+    "three": "0.180.0"
+  }
+}
