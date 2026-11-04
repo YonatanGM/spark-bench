@@ -39,13 +39,15 @@ setStage("loading");
 // Count streamed chunks and bytes. PagedSplats fetches chunks on the main
 // thread, so the browser's resource timing sees every request.
 const sourceDir = new URL(source.url, location.href).href.replace(/[^/]*$/, "");
-const net = { chunks: new Set(), bytes: 0 };
+const net = { chunks: new Set(), bytes: 0, again: 0, againBytes: 0 };
 performance.setResourceTimingBufferSize?.(10000);
 new PerformanceObserver((list) => {
   for (const e of list.getEntries()) {
     if (!e.name.startsWith(sourceDir)) continue;
-    net.bytes += e.encodedBodySize || e.transferSize || 0;
-    if (e.name.endsWith(".radc")) net.chunks.add(e.name);
+    if (!e.name.endsWith(".radc")) continue;
+    const size = e.encodedBodySize || e.transferSize || 0;
+    if (net.chunks.has(e.name)) { net.again++; net.againBytes += size; } // fetched before, so it was dropped from memory
+    else { net.chunks.add(e.name); net.bytes += size; }
   }
 }).observe({ type: "resource", buffered: true });
 
@@ -146,6 +148,15 @@ const pagerState = () => {
   if (!pager) return null;
   return { resident: pager.pageToSplatsChunk.filter(Boolean).length, busy: pager.isFetching() || pager.hasQueued(), poolPages: Math.floor(spark.maxPagedSplats / 65536) };
 };
+// Count chunks dropped from the pool (Spark evicts least recently used chunks when it is full)
+let heldChunks = new Set(), droppedChunks = 0;
+function trackDropped() {
+  const pager = spark.pager;
+  if (!pager) return;
+  const now = new Set(pager.pageToSplatsChunk.filter(Boolean).map((e) => e.chunk));
+  for (const c of heldChunks) if (!now.has(c)) droppedChunks++;
+  heldChunks = now;
+}
 
 // -------------------------------------------------------------- controls
 const sceneSelect = $("scene"), budget = $("budget"), custom = $("custom"), scale = $("scale");
@@ -210,26 +221,28 @@ function statSections(now) {
   ]]);
   S.push(["Splats", [
     ["Original (no LOD)", num(sceneDef.splats)],
-    ["Drawn", t.firstFrame ? num(mesh.numSplats) : "..."],
-    ["Budget", num((spark.lodSplatCount ?? autoBase) * spark.lodSplatScale)],
-    ["LOD updates", `${(cutEvents.length / 2).toFixed(1)}/s`],
+    ["Drawn now", t.firstFrame ? num(mesh.numSplats) : "..."],
+    ["Budget (most drawn)", num((spark.lodSplatCount ?? autoBase) * spark.lodSplatScale)],
+    ["LOD updates", `${(cutEvents.length / 2).toFixed(1)} per second`],
   ]]);
   // Streaming, in reading order: the whole tree, what came down, what is held
   S.push(["Streaming", [
-    ["LOD tree", treeNodes ? `${num(treeNodes)} nodes, ${mb(source.bytes)}` : mb(source.bytes)],
-    ["Downloaded", `${net.chunks.size} of ${source.chunks} chunks, ${mb(net.bytes)}`],
+    ["LOD tree", `${treeNodes ? `${num(treeNodes)} nodes in ` : ""}${source.chunks} chunks (${mb(source.bytes)})`],
+    ["Downloaded", `${net.chunks.size} of ${source.chunks} chunks (${mb(net.bytes)})`],
     ["In memory", p ? `${p.resident} of ${p.poolPages} chunks` : "..."],
+    ["Dropped from memory", `${droppedChunks} chunks`, droppedChunks ? "warn" : ""],
+    ["Downloaded again", `${net.again} chunks (${mb(net.againBytes)})`],
     ["Status", p ? (p.busy ? "loading detail" : "idle") : "..."],
   ]]);
   const pool = poolBytes();
   S.push(["Memory", [
-    ["Splat pool", `${millions(spark.maxPagedSplats)} splats${pool ? `, ${mb(pool)}` : ""}`],
+    ["Pool size", `${millions(spark.maxPagedSplats)} splats${pool ? ` (${mb(pool)})` : ""}`],
     ["Whole tree fits in pool", treeNodes ? (treeNodes <= spark.maxPagedSplats ? "yes" : "no") : "..."],
     ["JS heap", heap ? mb(heap) : "n/a in this browser"],
   ]]);
   S.push(["Loading", [
     ["First view after", secs(t.firstFrame && t.firstFrame - t.start)],
-    ["Full detail after", secs(t.sharp && t.sharp - t.start)],
+    ["Starting view complete after", secs(t.sharp && t.sharp - t.start)],
   ]]);
   S.push(["Device", [
     ["GPU", gpuName],
@@ -257,6 +270,7 @@ let lastHud = 0;
 function updateHud(now) {
   if (now - lastHud < 250) return;
   lastHud = now;
+  trackDropped(); // 4 times a second, not every frame
   const fps = frames.filter(([at]) => now - at < 1000).length;
   $("hud-summary").textContent = t.firstFrame ? `${fps} FPS, ${num(mesh.numSplats)} splats` : "Loading";
   if (hud.classList.contains("collapsed")) return;
@@ -320,4 +334,4 @@ renderer.setAnimationLoop(() => {
 });
 
 // For the headless check (tools/check_app.py)
-window.splatBench = { spark, mesh, t, net, pagerState };
+window.splatBench = { spark, mesh, t, net, pagerState, get dropped() { return droppedChunks; } };
