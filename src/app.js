@@ -224,7 +224,7 @@ function statSections(now) {
   ]]);
   S.push(["Splats", [
     ["Original (no LOD)", num(sceneDef.splats)],
-    ["LOD tree", treeNodes ? `${num(treeNodes)} nodes` : "..."],
+    ["LOD tree", `${treeNodes ? `${num(treeNodes)} nodes, ` : ""}${mb(source.bytes)}`],
     ["Drawn now", t.firstFrame ? num(mesh.numSplats) : "..."],
     ["Budget (most drawn)", num((spark.lodSplatCount ?? autoBase) * spark.lodSplatScale)],
     ["LOD updates", `${(cutEvents.length / 2).toFixed(1)} per second`],
@@ -234,7 +234,6 @@ function statSections(now) {
   while (droppedRecent.length && now - droppedRecent[0] > 2000) droppedRecent.shift();
   const dl = net.recent, dlBytes = dl.reduce((a, [, b]) => a + b, 0);
   S.push(["Streaming", [
-    ["Whole tree", `${source.chunks} chunks, ${mb(source.bytes)}`],
     ["In memory", p ? `${p.resident} of ${p.poolPages} chunks` : "..."],
     ["Downloading", `${(dl.length / 2).toFixed(1)} chunks/s, ${(dlBytes / 2 / 1048576).toFixed(1)} MB/s (${net.total} total)`],
     ["Dropping", `${(droppedRecent.length / 2).toFixed(1)} chunks/s (${droppedChunks} total)`, droppedRecent.length ? "warn" : ""],
