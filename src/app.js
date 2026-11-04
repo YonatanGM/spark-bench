@@ -28,7 +28,9 @@ const params = new URLSearchParams(location.search);
 const catalog = await (await fetch("scenes/scenes.json", { cache: "no-cache" })).json();
 const sceneDef = catalog.scenes.find((s) => s.id === params.get("scene")) ?? catalog.scenes[0];
 const source = sceneDef.sources.find((s) => s.id === params.get("src")) ?? sceneDef.sources[0];
-const mobile = isMobile();
+// isMobile() is false whenever navigator.platform is Windows (also in Chrome's
+// phone emulation), so the UA checks are added for emulated test runs.
+const mobile = isMobile() || isIos() || isAndroid();
 const num = (key, fallback) => {
   const v = Number.parseFloat(params.get(key));
   return Number.isFinite(v) ? v : fallback;
@@ -363,7 +365,7 @@ function updateHud(now) {
     lines.push(row("Splats", "loading…"));
   }
   lines.push("</div><div class=\"sec\">");
-  lines.push(row("Splat arrays (est.)", c ? fmtMB(c.splatArrayBytes) : "—"));
+  lines.push(row("Splat arrays (allocated)", c ? fmtMB(c.splatArrayBytes) : "—"));
   lines.push(row("JS heap", heap != null ? fmtMB(heap) : "n/a (Chrome only)"));
   lines.push("</div><div class=\"sec\">");
   lines.push(row("Download", L.downloadMs != null ? `${fmtS(L.downloadMs)} · ${fmtMB(L.bytes)} · ${L.mbPerSecond} MB/s` : "…"));
@@ -456,7 +458,7 @@ function buildReport(benchResult = null) {
       lodTreeNodes: c?.lodTreeNodes ?? null,
       lodUpdatesPerSec: r(cutRate.perSecond(performance.now()), 1),
     },
-    memory: { splatArraysMB: c ? r(c.splatArrayBytes / 1048576, 1) : null, jsHeapMB: jsHeap() != null ? r(jsHeap() / 1048576, 1) : null },
+    memory: { splatArraysAllocatedMB: c ? r(c.splatArrayBytes / 1048576, 1) : null, jsHeapMB: jsHeap() != null ? r(jsHeap() / 1048576, 1) : null },
     events: { webglContextLost: contextLost, previousLoadDidNotFinish: previousCrash },
     benchmark: benchResult,
   };
@@ -483,7 +485,7 @@ function showReport(report, title) {
   }
   tr("Effective budget", fmtInt(report.settings.effectiveBudget));
   tr("Load: download · decode+LOD · total", `${fmtS(report.load.downloadMs)} · ${fmtS(report.load.decodeAndLodMs)} · ${fmtS(report.load.totalMs)}`);
-  tr("Splat arrays (est.)", `${report.memory.splatArraysMB} MB`);
+  tr("Splat arrays (allocated)", `${report.memory.splatArraysAllocatedMB} MB`);
   $("report-summary").innerHTML = `<table>${rows.join("")}</table>`;
   const json = JSON.stringify(report, null, 2);
   $("report-json").value = json;
