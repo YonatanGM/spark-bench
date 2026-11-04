@@ -4,22 +4,17 @@ Open a large Gaussian splat scene on any phone, tablet or computer and see how i
 
 **Live:** https://yonatangm.github.io/spark-bench/
 
-## Settings
-- **Scene** and **LOD tree build** (fast or quality). Changing these reloads the page so memory starts clean.
-- **Budget**: the most splats drawn per frame. Auto uses Spark's device default; there are presets, a custom number, and "All splats, LOD off".
-- **LOD scale** multiplies the budget. **Skip splats smaller than** a pixel size. **Detail toward the screen edges** (Spark's foveation).
-- **Resolution** (pixel ratio), **splat edge cutoff** (less overdraw), **field of view**, **move speed**, on-screen **joystick**.
-- **Copy stats as text** copies the stats panel, device and settings so testers can paste them into a message.
-
-Move: drag to look, WASD or arrow keys, mouse wheel. On touch screens: drag to look, two fingers or the joystick (from Spark's mobile-joystick example).
-
-## Stats panel
-- Performance: frames per second, average frame time, slowest frame, stutters (frames over 50 ms), GPU time per frame where the browser supports it
-- Splats: drawn now, budget, LOD selection updates, scene total, LOD tree size
-- Memory: splat data (original plus LOD tree), JavaScript heap (Chrome only)
-- Loading: download, decode and LOD tree build times, measured separately
-- Device: GPU, browser, screen, render size, Spark device type and default budget
+## Panel
+One panel on the left holds everything. Tap the top line to show or hide it (it starts hidden on phones).
+- Controls: scene, budget (Auto, 250k to 10M, custom, or all splats with LOD off), LOD scale, reset view
+- Performance: FPS, frame time, slowest frame, stutters over 50 ms, GPU time (where the browser supports it)
+- Splats: drawn, budget, LOD updates, scene total, LOD tree size
+- Memory: splat data, JS heap (Chrome only)
+- Loading: download time and speed, decode, LOD build, total until visible
+- Device: GPU, browser, screen, render size, CPU threads
 - Problems: a previous load that crashed the tab, or a lost WebGL context
+
+Move: drag to look, WASD or arrow keys, mouse wheel. Touch screens get Spark's on-screen joystick automatically.
 
 ## Scenes
 Both scenes are CC BY 4.0 and were downloaded from SuperSplat:

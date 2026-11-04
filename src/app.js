@@ -6,16 +6,15 @@
 // - mesh.enableLod + updateVersion() for LOD on/off      (nonlod)
 // - SparkControls with rotateSpeed x2                    (lod)
 // - virtual joystick on touch devices                    (mobile-joystick)
-// LOD budget/scale controls mirror the local experiment viewer (hybrid_web).
+// Budget and LOD scale controls mirror the local experiment viewer (hybrid_web).
 import * as THREE from "three";
 import { SparkRenderer, SplatMesh, SparkControls, SplatFileType, isMobile, isIos, isAndroid } from "@sparkjsdev/spark";
 import { createGpuTimer } from "./gpu_timer.js";
-import { initMobileControls, getMobileInput, isMobileDevice, setMobileControlsEnabled } from "./joystick.js";
+import { initMobileControls, getMobileInput, isMobileDevice } from "./joystick.js";
 
-const VERSIONS = { app: "0.2.0", spark: "2.4.0", three: `r${THREE.REVISION}` };
 const $ = (id) => document.getElementById(id);
 const num = (n) => (n == null ? "n/a" : Math.round(n).toLocaleString("en-US"));
-const secs = (ms) => (ms == null ? "waiting" : `${(ms / 1000).toFixed(1)} s`);
+const secs = (ms) => (ms == null ? "..." : `${(ms / 1000).toFixed(1)} s`);
 const mb = (b) => (b == null ? "n/a" : b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(2)} GB` : `${Math.round(b / 1024 ** 2)} MB`);
 const readStore = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
 const writeStore = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -25,7 +24,6 @@ const catalog = await (await fetch("scenes/scenes.json", { cache: "no-cache" }))
 const params = new URLSearchParams(location.search);
 const sceneDef = catalog.scenes.find((s) => s.id === params.get("scene")) ?? catalog.scenes[0];
 const source = sceneDef.sources[0];
-const lodQuality = params.get("lod") === "quality";
 // Spark's isMobile() is false whenever navigator.platform is Windows, so add UA checks.
 const mobile = isMobile() || isIos() || isAndroid();
 const platform = isIos() ? "iOS" : isAndroid() ? "Android" : mobile ? "mobile" : "desktop";
@@ -34,13 +32,13 @@ const platform = isIos() ? "iOS" : isAndroid() ? "Android" : mobile ? "mobile" :
 // that run out of memory). Remember the stage so the next visit can report it.
 const PENDING = "splatbench.pending";
 const lastCrash = readStore(PENDING);
-let stage = "downloading";
-const setStage = (s) => { stage = s; writeStore(PENDING, s === "rendering" ? null : { scene: sceneDef.title, stage: s }); };
+const setStage = (s) => writeStore(PENDING, s === "rendering" ? null : { scene: sceneDef.title, stage: s });
 setStage("downloading");
 
 // ---------------------------------------------------------------- three
 const canvas = $("canvas");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(sceneDef.camera.fov, 1, 0.01, 2000);
 const Y = new THREE.Vector3(0, 1, 0);
@@ -50,28 +48,18 @@ function resetView() {
   camera.lookAt(new THREE.Vector3().fromArray(sceneDef.camera.target));
 }
 resetView();
-
-const prefs = { budget: "auto", custom: null, scale: 1, minPx: 1, fovea: "default", dpr: Math.min(devicePixelRatio, 2), stddev: 2.8284, fov: sceneDef.camera.fov, speed: 1, joystick: isMobileDevice(), ...(readStore("splatbench.prefs.v2") ?? {}) };
-prefs.fov = readStore("splatbench.fov")?.[sceneDef.id] ?? sceneDef.camera.fov;
-
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (!w || !h) return;
-  renderer.setPixelRatio(prefs.dpr);
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(canvas);
 
-const spark = new SparkRenderer({ renderer, maxStdDev: prefs.stddev });
+const spark = new SparkRenderer({ renderer });
 scene.add(spark);
 const autoBase = spark.defaultSplatTarget();
-const FOVEA = {
-  default: { coneFov0: spark.coneFov0, coneFov: spark.coneFov, coneFoveate: spark.coneFoveate, behindFoveate: spark.behindFoveate },
-  off: { coneFov0: 0, coneFov: 0, coneFoveate: 1, behindFoveate: 1 },
-  strong: { coneFov0: 60, coneFov: 100, coneFoveate: 0.3, behindFoveate: 0.1 },
-};
 const gpuTimer = createGpuTimer(renderer);
 const gl = renderer.getContext();
 const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
@@ -81,7 +69,21 @@ canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); context
 
 const controls = new SparkControls({ canvas });
 controls.pointerControls.rotateSpeed *= 2.0; // examples/lod
-const baseSpeed = { move: controls.fpsMovement.moveSpeed, slide: controls.pointerControls.slideSpeed, scroll: controls.pointerControls.scrollSpeed };
+const k = sceneDef.moveSpeed ?? 1; // scenes differ in scale (garage ~10 m, planet ~70 units)
+controls.fpsMovement.moveSpeed *= k;
+controls.pointerControls.slideSpeed *= k;
+controls.pointerControls.scrollSpeed *= k;
+
+// Joystick on touch screens, values from examples/mobile-joystick
+const joystick = isMobileDevice();
+if (joystick) {
+  initMobileControls({ joystickSize: 140, knobSize: 60, marginLeft: 40, marginBottom: 40 });
+  document.body.classList.add("has-joystick");
+  const hint = $("hint");
+  hint.textContent = "Use the joystick to move, drag to look around";
+  hint.hidden = false;
+  setTimeout(() => hint.classList.add("fade"), 6000);
+}
 
 // ------------------------------------------------------------------ load
 const t = { start: performance.now(), downloaded: null, decoded: null, lodStart: null, lodEnd: null, firstFrame: null };
@@ -135,184 +137,121 @@ let lodReady = false;
   t.decoded = performance.now();
   setStage("building the LOD tree");
   t.lodStart = performance.now();
-  await mesh.createLodSplats({ quality: lodQuality }); // examples/lod-on-demand
+  await mesh.createLodSplats({ quality: false }); // examples/lod-on-demand
   t.lodEnd = performance.now();
   lodReady = true;
   mesh.visible = true;
-  applySettings();
+  applyLod();
 })().catch(fail);
 
-// -------------------------------------------------------------- settings
-const panel = $("panel");
-const ui = { scene: $("scene"), quality: $("lod-quality"), budget: $("budget"), custom: $("custom"), scale: $("scale"), minPx: $("minpx"), fovea: $("fovea"), dpr: $("dpr"), stddev: $("stddev"), fov: $("fov"), speed: $("speed"), joystick: $("joystick") };
-
-for (const s of catalog.scenes) ui.scene.add(new Option(`${s.title} (${(s.splats / 1e6).toFixed(1)} million splats)`, s.id));
-ui.scene.value = sceneDef.id;
-ui.quality.value = lodQuality ? "quality" : "fast";
-$("load").addEventListener("click", () => {
+// -------------------------------------------------------------- controls
+const sceneSelect = $("scene"), budget = $("budget"), custom = $("custom"), scale = $("scale");
+for (const s of catalog.scenes) sceneSelect.add(new Option(`${s.title} (${(s.splats / 1e6).toFixed(1)}M)`, s.id));
+sceneSelect.value = sceneDef.id;
+sceneSelect.addEventListener("change", () => {
   writeStore(PENDING, null); // leaving on purpose, not a crash
-  location.search = `?scene=${ui.scene.value}${ui.quality.value === "quality" ? "&lod=quality" : ""}`;
+  location.search = `?scene=${sceneSelect.value}`;
 });
+$("reset").addEventListener("click", resetView);
 
-ui.budget.querySelector('[value="auto"]').textContent = `Auto (Spark's ${platform} default: ${num(autoBase)})`;
-const ratios = [...new Set([devicePixelRatio, 3, 2, 1.5, 1, 0.75, 0.5].filter((r) => r <= devicePixelRatio).map((r) => +r.toFixed(2)))];
-for (const r of ratios) ui.dpr.add(new Option(r === +devicePixelRatio.toFixed(2) ? `Full (pixel ratio ${r})` : `Pixel ratio ${r}`, String(r)));
+budget.querySelector('[value="auto"]').textContent = `Auto (${(autoBase / 1e6).toFixed(1)}M on ${platform})`;
+const PREFS = "splatbench.prefs.v3";
+const saved = readStore(PREFS) ?? {};
+if ([...budget.options].some((o) => o.value === saved.budget)) budget.value = saved.budget;
+custom.value = String(saved.custom ?? autoBase);
+scale.value = String(saved.scale ?? 1);
 
-if ([...ui.budget.options].some((o) => o.value === prefs.budget)) ui.budget.value = prefs.budget;
-ui.custom.value = String(prefs.custom ?? autoBase);
-ui.scale.value = String(prefs.scale);
-ui.minPx.value = String(prefs.minPx);
-ui.fovea.value = prefs.fovea;
-ui.dpr.value = String(ratios.find((r) => r <= prefs.dpr) ?? ratios.at(-1));
-ui.stddev.value = [...ui.stddev.options].some((o) => Number(o.value) === prefs.stddev) ? String(prefs.stddev) : "2.8284";
-ui.fov.value = String(prefs.fov);
-ui.speed.value = String(prefs.speed);
-ui.joystick.checked = prefs.joystick;
-
-const lodOn = () => lodReady && ui.budget.value !== "full";
-const baseBudget = () => spark.lodSplatCount ?? autoBase;
-
-function applySettings() {
-  const full = ui.budget.value === "full";
-  $("custom-wrap").hidden = ui.budget.value !== "custom";
-  for (const el of [ui.scale, ui.minPx, ui.fovea]) el.disabled = full;
-  if (ui.budget.value === "custom" && !ui.custom.checkValidity()) return;
-
-  spark.lodSplatCount = full || ui.budget.value === "auto" ? undefined : Number(ui.budget.value === "custom" ? ui.custom.value : ui.budget.value);
-  spark.lodSplatScale = Number(ui.scale.value);
-  spark.lodRenderScale = Number(ui.minPx.value);
-  Object.assign(spark, FOVEA[ui.fovea.value]);
-  spark.maxStdDev = Number(ui.stddev.value);
+function applyLod() {
+  const full = budget.value === "full";
+  $("custom-wrap").hidden = budget.value !== "custom";
+  scale.disabled = full;
+  if (budget.value === "custom" && !custom.checkValidity()) return;
+  spark.lodSplatCount = full || budget.value === "auto" ? undefined : Number(budget.value === "custom" ? custom.value : budget.value);
+  spark.lodSplatScale = Number(scale.value);
+  $("scale-out").value = `${spark.lodSplatScale.toFixed(1)}x`;
   if (lodReady) {
     mesh.enableLod = !full; // examples/nonlod
     mesh.updateVersion();
   }
-
-  Object.assign(prefs, { budget: ui.budget.value, custom: Number(ui.custom.value), scale: Number(ui.scale.value), minPx: Number(ui.minPx.value), fovea: ui.fovea.value, dpr: Number(ui.dpr.value), stddev: Number(ui.stddev.value), fov: Number(ui.fov.value), speed: Number(ui.speed.value), joystick: ui.joystick.checked });
-  camera.fov = prefs.fov;
-  resize();
-  const k = (sceneDef.moveSpeed ?? 1) * prefs.speed; // scenes differ in scale
-  controls.fpsMovement.moveSpeed = baseSpeed.move * k;
-  controls.pointerControls.slideSpeed = baseSpeed.slide * k;
-  controls.pointerControls.scrollSpeed = baseSpeed.scroll * k;
-  if (prefs.joystick) initMobileControls({ joystickSize: 140, knobSize: 60, marginLeft: 40, marginBottom: 40 }); // values from examples/mobile-joystick
-  setMobileControlsEnabled(prefs.joystick && panel.hidden);
-  document.body.classList.toggle("has-joystick", prefs.joystick);
-
-  $("scale-out").value = `${prefs.scale.toFixed(1)}x`;
-  $("minpx-out").value = `${prefs.minPx} px`;
-  $("fov-out").value = `${prefs.fov} deg`;
-  $("speed-out").value = `${prefs.speed.toFixed(1)}x`;
-  const { fov, ...saved } = prefs;
-  writeStore("splatbench.prefs.v2", saved);
-  writeStore("splatbench.fov", { ...(readStore("splatbench.fov") ?? {}), [sceneDef.id]: fov });
+  writeStore(PREFS, { budget: budget.value, custom: Number(custom.value), scale: Number(scale.value) });
 }
-for (const el of [ui.budget, ui.custom, ui.fovea, ui.dpr, ui.stddev, ui.joystick]) el.addEventListener("change", applySettings);
-for (const el of [ui.scale, ui.minPx, ui.fov, ui.speed]) el.addEventListener("input", applySettings);
-applySettings();
+budget.addEventListener("change", applyLod);
+custom.addEventListener("change", applyLod);
+scale.addEventListener("input", applyLod);
+applyLod();
 
-// While Settings is open, hide what would sit on top of it or show through it
-// (the joystick from examples/mobile-joystick uses z-index 1000).
-function setPanel(open) {
-  panel.hidden = !open;
-  document.body.classList.toggle("panel-open", open);
-  setMobileControlsEnabled(prefs.joystick && !open);
-}
-$("settings-open").addEventListener("click", () => setPanel(true));
-$("panel-close").addEventListener("click", () => setPanel(false));
-$("reset").addEventListener("click", resetView);
-$("versions").textContent = `Splat Stress Test ${VERSIONS.app}, Spark ${VERSIONS.spark}, three.js ${VERSIONS.three}`;
-const credit = `<a href="${sceneDef.sourceUrl}" target="_blank" rel="noopener">${sceneDef.title}</a> by <a href="${sceneDef.authorUrl}" target="_blank" rel="noopener">${sceneDef.author}</a>, <a href="${sceneDef.licenseUrl}" target="_blank" rel="noopener">${sceneDef.license}</a>`;
-$("credit").innerHTML = credit;
-$("panel-credit").innerHTML = `Scene: ${credit}`;
-
-// Hint as in examples/mobile-joystick, faded out after a few seconds.
-const hint = $("hint");
-hint.textContent = prefs.joystick ? "Use the joystick to move, drag to look around" : "WASD to move, drag to look around";
-hint.classList.toggle("touch", prefs.joystick);
-setTimeout(() => hint.classList.add("fade"), 8000);
+$("credit").innerHTML = `<a href="${sceneDef.sourceUrl}" target="_blank" rel="noopener">${sceneDef.title}</a> by <a href="${sceneDef.authorUrl}" target="_blank" rel="noopener">${sceneDef.author}</a>, <a href="${sceneDef.licenseUrl}" target="_blank" rel="noopener">${sceneDef.license}</a>`;
 
 // ------------------------------------------------------------------ stats
 const frames = []; // [time, frame ms], last 10 s
-const cutEvents = []; // times of LOD selection updates, last 2 s
-let cutTotal = 0, lastVersion = null;
+const cutEvents = []; // times of LOD updates, last 2 s
+let lastVersion = null;
 
 function splatBytes() {
   const bytes = (s) => (s ? (s.packedArray?.byteLength ?? 0) + ["sh1", "sh2", "sh3"].reduce((a, k) => a + (s.extra?.[k]?.byteLength ?? 0), 0) : 0);
   return bytes(mesh.packedSplats) + bytes(mesh.packedSplats?.lodSplats);
 }
 function browserName() {
-  const ua = navigator.userAgent;
-  const m = ua.match(/(Edg|OPR|Firefox|CriOS|FxiOS|Chrome|Version)\/(\d+)/);
-  const name = { Edg: "Edge", OPR: "Opera", CriOS: "Chrome iOS", FxiOS: "Firefox iOS", Version: "Safari" }[m?.[1]] ?? m?.[1] ?? "Unknown";
+  const m = navigator.userAgent.match(/(Edg|OPR|Firefox|CriOS|FxiOS|Chrome|Version)\/(\d+)/);
+  const name = { Edg: "Edge", OPR: "Opera", CriOS: "Chrome", FxiOS: "Firefox", Version: "Safari" }[m?.[1]] ?? m?.[1] ?? "Unknown";
   return `${name} ${m?.[2] ?? ""}`.trim();
 }
 
-// Returns sections of [label, value, hint?, cls?] rows. Used for the panel and "Copy stats".
-function collectStats(now) {
-  const last1 = frames.filter(([at]) => now - at < 1000);
+function statSections(now) {
+  const last1 = frames.filter(([at]) => now - at < 1000).length;
   const last2 = frames.filter(([at]) => now - at < 2000).map(([, d]) => d);
   const avg = last2.length ? last2.reduce((a, b) => a + b, 0) / last2.length : null;
-  const slowest = last2.length ? Math.max(...last2) : null;
   const stutters = frames.filter(([, d]) => d > 50).length;
   const gpu = gpuTimer.milliseconds;
   const heap = performance.memory?.usedJSHeapSize;
+  const lodOn = lodReady && budget.value !== "full";
+  while (cutEvents.length && now - cutEvents[0] > 2000) cutEvents.shift();
+
   const S = [];
-
   S.push(["Performance", [
-    ["Frames per second", String(last1.length), null, last1.length >= 50 ? "good" : last1.length >= 28 ? "warn" : "bad"],
-    ["Frame time, average", avg ? `${avg.toFixed(1)} ms` : "n/a"],
-    ["Slowest frame, last 2 s", slowest ? `${slowest.toFixed(0)} ms` : "n/a"],
-    ["Stutters, last 10 s", `${stutters} frames over 50 ms`, null, stutters ? "warn" : ""],
-    ["GPU time per frame", gpuTimer.supported ? (gpu != null ? `${gpu.toFixed(2)} ms` : "measuring") : "not available in this browser"],
-  ], "The screen caps the frame rate (often 60). GPU time shows how much headroom is left."]);
-
-  const splatRows = [["Drawn now", lodReady ? num(mesh.numSplats) : "loading"]];
-  if (lodOn()) {
-    splatRows.push(["Budget", num(baseBudget() * spark.lodSplatScale), `${spark.lodSplatCount == null ? "Auto" : "Custom"} base ${num(baseBudget())} times scale ${spark.lodSplatScale.toFixed(1)}`]);
-    while (cutEvents.length && now - cutEvents[0] > 2000) cutEvents.shift();
-    splatRows.push(["LOD selection updates", `${(cutEvents.length / 2).toFixed(1)} per second, ${num(cutTotal)} total`]);
-  } else if (lodReady) {
-    splatRows.push(["Budget", "LOD off, every splat is drawn"]);
-  }
-  splatRows.push(["Scene total", num(sceneDef.splats)]);
-  splatRows.push(["LOD tree size", mesh.packedSplats?.lodSplats ? `${num(mesh.packedSplats.lodSplats.numSplats)} nodes` : "not built yet"]);
-  S.push(["Splats", splatRows]);
-
-  S.push(["Memory", [
-    ["Splat data, original and LOD tree", lodReady ? mb(splatBytes()) : "loading"],
-    ["JavaScript heap", heap ? mb(heap) : "only reported by Chrome"],
+    ["FPS", String(last1), last1 >= 50 ? "good" : last1 >= 28 ? "warn" : "bad"],
+    ["Frame time", avg ? `${avg.toFixed(1)} ms` : "n/a"],
+    ["Slowest frame (2 s)", last2.length ? `${Math.max(...last2).toFixed(0)} ms` : "n/a"],
+    ["Stutters over 50 ms (10 s)", String(stutters), stutters ? "warn" : ""],
+    ["GPU time", gpuTimer.supported ? (gpu != null ? `${gpu.toFixed(2)} ms` : "...") : "n/a in this browser"],
   ]]);
-
+  S.push(["Splats", [
+    ["Drawn", lodReady ? num(mesh.numSplats) : "..."],
+    ["Budget", lodOn ? num((spark.lodSplatCount ?? autoBase) * spark.lodSplatScale) : lodReady ? "LOD off" : "..."],
+    ["LOD updates", lodOn ? `${(cutEvents.length / 2).toFixed(1)}/s` : "n/a"],
+    ["Scene total", num(sceneDef.splats)],
+    ["LOD tree", mesh.packedSplats?.lodSplats ? `${num(mesh.packedSplats.lodSplats.numSplats)} nodes` : "..."],
+  ]]);
+  const memory = [["Splat data", lodReady ? mb(splatBytes()) : "..."]];
+  if (heap) memory.push(["JS heap", mb(heap)]);
+  S.push(["Memory", memory]);
   S.push(["Loading", [
-    ["Download", t.downloaded ? `${secs(t.downloaded - t.start)}, ${mb(source.bytes)}, ${((source.bytes / 1048576) / ((t.downloaded - t.start) / 1000)).toFixed(0)} MB/s` : `${mb(downloadedBytes)} of ${mb(source.bytes)}`],
+    ["Download", t.downloaded ? `${secs(t.downloaded - t.start)}, ${mb(source.bytes)}` : `${mb(downloadedBytes)} of ${mb(source.bytes)}`],
+    ["Download speed", t.downloaded ? `${((source.bytes / 1048576) / ((t.downloaded - t.start) / 1000)).toFixed(1)} MB/s` : "..."],
     ["Decode", secs(t.decoded && t.downloaded && t.decoded - t.downloaded)],
-    [`LOD tree build, ${lodQuality ? "quality" : "fast"}`, secs(t.lodEnd && t.lodEnd - t.lodStart)],
-    ["Ready to view after", secs(t.firstFrame && t.firstFrame - t.start)],
+    ["LOD build", secs(t.lodEnd && t.lodEnd - t.lodStart)],
+    ["Total until visible", secs(t.firstFrame && t.firstFrame - t.start)],
   ]]);
-
   S.push(["Device", [
     ["GPU", gpuName],
     ["Browser", browserName()],
-    ["Screen", `${screen.width} by ${screen.height}, pixel ratio ${+devicePixelRatio.toFixed(2)}`],
-    ["Rendering", `${renderer.domElement.width} by ${renderer.domElement.height} pixels`],
-    ["Spark device type", `${platform}, default budget ${num(autoBase)}`],
-    ["CPU threads, memory", `${navigator.hardwareConcurrency ?? "n/a"}, ${navigator.deviceMemory ? `${navigator.deviceMemory} GB or more` : "not reported"}`],
+    ["Screen", `${screen.width} x ${screen.height}, DPR ${+devicePixelRatio.toFixed(2)}`],
+    ["Render size", `${renderer.domElement.width} x ${renderer.domElement.height}`],
+    ["CPU threads", String(navigator.hardwareConcurrency ?? "n/a")],
   ]]);
-
   const problems = [];
-  if (lastCrash) problems.push(["Previous load", `${lastCrash.scene} did not finish (stopped while ${lastCrash.stage}). The tab most likely ran out of memory.`, null, "bad"]);
-  if (contextLost) problems.push(["WebGL", "Context lost, the GPU ran out of memory or reset. Reload to continue.", null, "bad"]);
+  if (lastCrash) problems.push(["Last load", `${lastCrash.scene} crashed while ${lastCrash.stage}`, "bad"]);
+  if (contextLost) problems.push(["WebGL", "context lost (GPU out of memory?)", "bad"]);
   if (problems.length) S.push(["Problems", problems]);
   return S;
 }
 
 const hud = $("hud");
-const hudBody = $("hud-body");
+const stats = $("stats");
 if (mobile) hud.classList.add("collapsed");
-function syncHudToggle() { $("hud-toggle-text").textContent = hud.classList.contains("collapsed") ? "Show details" : "Hide details"; }
-$("hud-toggle").addEventListener("click", () => { hud.classList.toggle("collapsed"); syncHudToggle(); });
-syncHudToggle();
+function syncToggle() { $("hud-toggle-text").textContent = hud.classList.contains("collapsed") ? "Show" : "Hide"; }
+$("hud-toggle").addEventListener("click", () => { hud.classList.toggle("collapsed"); syncToggle(); });
+syncToggle();
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 let lastHud = 0;
@@ -322,24 +261,10 @@ function updateHud(now) {
   const fps = frames.filter(([at]) => now - at < 1000).length;
   $("hud-summary").textContent = lodReady ? `${fps} FPS, ${num(mesh.numSplats)} splats` : "Loading";
   if (hud.classList.contains("collapsed")) return;
-  hudBody.innerHTML = collectStats(now).map(([title, rows, hint]) =>
-    `<h3>${title}</h3>${rows.map(([k, v, h, cls]) => `<div class="row"><span class="k">${esc(k)}</span><span class="v ${cls ?? ""}">${esc(v)}</span></div>${h ? `<div class="hint">${esc(h)}</div>` : ""}`).join("")}${hint ? `<div class="hint">${esc(hint)}</div>` : ""}`
+  stats.innerHTML = statSections(now).map(([title, rows]) =>
+    `<h3>${title}</h3>${rows.map(([key, value, cls]) => `<div class="row"><span class="k">${esc(key)}</span><span class="v ${cls ?? ""}">${esc(value)}</span></div>`).join("")}`
   ).join("");
 }
-
-$("copy").addEventListener("click", async () => {
-  const lines = [`Splat Stress Test, ${new Date().toISOString()}`, `Scene: ${sceneDef.title}`, ""];
-  for (const [title, rows] of collectStats(performance.now())) {
-    lines.push(title);
-    for (const [k, v, h] of rows) lines.push(`  ${k}: ${v}${h ? ` (${h})` : ""}`);
-  }
-  lines.push("Settings", `  Budget: ${ui.budget.selectedOptions[0].text}${ui.budget.value === "custom" ? ` ${ui.custom.value}` : ""}`, `  LOD scale: ${prefs.scale}`, `  Skip splats smaller than: ${prefs.minPx} px`, `  Detail toward edges: ${ui.fovea.selectedOptions[0].text}`, `  Resolution: ${ui.dpr.selectedOptions[0].text}`, `  Splat edge cutoff: ${ui.stddev.selectedOptions[0].text}`, `  Field of view: ${prefs.fov} deg`);
-  lines.push(`Versions: Spark ${VERSIONS.spark}, three.js ${VERSIONS.three}, app ${VERSIONS.app}`, `User agent: ${navigator.userAgent}`);
-  const text = lines.join("\n");
-  try { await navigator.clipboard.writeText(text); $("copy").textContent = "Copied"; }
-  catch { prompt("Copy these stats", text); }
-  setTimeout(() => ($("copy").textContent = "Copy stats as text"), 1500);
-});
 
 function updateLoading(now) {
   if (t.firstFrame || loading.classList.contains("error")) return;
@@ -354,12 +279,12 @@ function updateLoading(now) {
   bar.classList.add("busy");
   if (!t.decoded) {
     $("load-title").textContent = "Decoding";
-    $("load-detail").textContent = `${num(sceneDef.splats)} splats, ${secs(now - t.downloaded)} so far`;
+    $("load-detail").textContent = `${num(sceneDef.splats)} splats, ${secs(now - t.downloaded)}`;
   } else if (!lodReady) {
-    $("load-title").textContent = `Building the LOD tree (${lodQuality ? "quality" : "fast"})`;
-    $("load-detail").textContent = `${secs(now - t.lodStart)} so far. This step has no progress events.`;
+    $("load-title").textContent = "Building LOD tree";
+    $("load-detail").textContent = secs(now - t.lodStart);
   } else {
-    $("load-title").textContent = "Preparing the first frame";
+    $("load-title").textContent = "First frame";
     $("load-detail").textContent = "";
   }
 }
@@ -375,7 +300,7 @@ renderer.setAnimationLoop(() => {
   while (frames.length && now - frames[0][0] > 10000) frames.shift();
 
   controls.update(camera);
-  if (prefs.joystick) {
+  if (joystick) {
     // examples/mobile-joystick: move along the view direction
     const input = getMobileInput();
     if (input.x || input.y) camera.position.add(move.set(input.x, 0, input.y).multiplyScalar((controls.fpsMovement.moveSpeed * dt) / 1000).applyQuaternion(camera.quaternion));
@@ -383,10 +308,7 @@ renderer.setAnimationLoop(() => {
   gpuTimer.render(() => renderer.render(scene, camera));
 
   if (lodReady) {
-    if (mesh.enableLod && lastVersion !== null && mesh.mappingVersion !== lastVersion) {
-      cutTotal += mesh.mappingVersion - lastVersion;
-      cutEvents.push(now);
-    }
+    if (mesh.enableLod && lastVersion !== null && mesh.mappingVersion !== lastVersion) cutEvents.push(now);
     lastVersion = mesh.mappingVersion;
     if (!t.firstFrame && spark.activeSplats > 0) {
       t.firstFrame = performance.now();
@@ -399,4 +321,4 @@ renderer.setAnimationLoop(() => {
 });
 
 // For the headless check (tools/check_app.py)
-window.splatBench = { spark, mesh, t, get lodReady() { return lodReady; }, get stage() { return stage; } };
+window.splatBench = { spark, mesh, t, get lodReady() { return lodReady; } };
