@@ -131,6 +131,15 @@ setStage("streaming");
 let treeNodes = null;
 mesh.initialized.then(() => mesh.paged?.radMetaPromise?.then(({ meta }) => (treeNodes = meta.count))).catch(() => {});
 
+// Memory reserved by the splat pool: Spark's pager backs each pool texture with
+// a Uint32Array (the GPU holds a matching copy), so their sizes are exact.
+function poolBytes() {
+  const pager = spark.pager;
+  if (!pager) return null;
+  const textures = [pager.packedTexture?.value, pager.extTexture?.value, ...(pager.shTextures ?? []).map((t) => t.value)];
+  return textures.reduce((sum, tex) => sum + (tex?.image?.data?.byteLength ?? 0), 0);
+}
+
 // Chunk loading state from Spark's pager: each filled page holds one chunk
 const pagerState = () => {
   const pager = spark.pager;
@@ -203,18 +212,21 @@ function statSections(now) {
     ["Original (no LOD)", num(sceneDef.splats)],
     ["Drawn", t.firstFrame ? num(mesh.numSplats) : "..."],
     ["Budget", num((spark.lodSplatCount ?? autoBase) * spark.lodSplatScale)],
-    ["LOD tree", treeNodes ? `${num(treeNodes)} nodes` : "..."],
     ["LOD updates", `${(cutEvents.length / 2).toFixed(1)}/s`],
   ]]);
+  // Streaming, in reading order: the whole tree, what came down, what is held
   S.push(["Streaming", [
-    ["Chunks downloaded", `${net.chunks.size} of ${source.chunks}`],
-    ["Downloaded", `${mb(net.bytes)} of ${mb(source.bytes)}`],
-    ["Chunks in memory", p ? `${p.resident} (pool holds ${p.poolPages})` : "..."],
+    ["LOD tree", treeNodes ? `${num(treeNodes)} nodes, ${mb(source.bytes)}` : mb(source.bytes)],
+    ["Downloaded", `${net.chunks.size} of ${source.chunks} chunks, ${mb(net.bytes)}`],
+    ["In memory", p ? `${p.resident} of ${p.poolPages} chunks` : "..."],
     ["Status", p ? (p.busy ? "loading detail" : "idle") : "..."],
   ]]);
-  const memory = [["Splat pool", `${millions(spark.maxPagedSplats)} splats`]];
-  if (heap) memory.push(["JS heap", mb(heap)]);
-  S.push(["Memory", memory]);
+  const pool = poolBytes();
+  S.push(["Memory", [
+    ["Splat pool", `${millions(spark.maxPagedSplats)} splats${pool ? `, ${mb(pool)}` : ""}`],
+    ["Whole tree fits in pool", treeNodes ? (treeNodes <= spark.maxPagedSplats ? "yes" : "no") : "..."],
+    ["JS heap", heap ? mb(heap) : "n/a in this browser"],
+  ]]);
   S.push(["Loading", [
     ["First view after", secs(t.firstFrame && t.firstFrame - t.start)],
     ["Full detail after", secs(t.sharp && t.sharp - t.start)],
