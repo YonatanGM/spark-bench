@@ -216,11 +216,12 @@ function statSections(now) {
     ["GPU time", gpuTimer.supported ? (gpu != null ? `${gpu.toFixed(2)} ms` : "...") : "n/a in this browser"],
   ]]);
   S.push(["Splats", [
+    // Count from the loaded file once decoded (catalog value until then)
+    ["Original (no LOD)", num(mesh.packedSplats?.numSplats || sceneDef.splats)],
     ["Drawn", lodReady ? num(mesh.numSplats) : "..."],
     ["Budget", lodOn ? num((spark.lodSplatCount ?? autoBase) * spark.lodSplatScale) : lodReady ? "LOD off" : "..."],
-    ["LOD updates", lodOn ? `${(cutEvents.length / 2).toFixed(1)}/s` : "n/a"],
-    ["Scene total", num(sceneDef.splats)],
     ["LOD tree", mesh.packedSplats?.lodSplats ? `${num(mesh.packedSplats.lodSplats.numSplats)} nodes` : "..."],
+    ["LOD updates", lodOn ? `${(cutEvents.length / 2).toFixed(1)}/s` : "n/a"],
   ]]);
   const memory = [["Splat data", lodReady ? mb(splatBytes()) : "..."]];
   if (heap) memory.push(["JS heap", mb(heap)]);
