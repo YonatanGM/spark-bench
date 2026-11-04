@@ -32,16 +32,11 @@
       "moveSpeed": 1.5,
       "sources": [
         {
-          "id": "sog",
-          "label": "SOG · SuperSplat export (187 MB)",
-          "fileName": "garage.sog",
-          "bytes": 187142352,
-          "parts": [
-            "scenes/garage/garage.sog.part00",
-            "scenes/garage/garage.sog.part01",
-            "scenes/garage/garage.sog.part02",
-            "scenes/garage/garage.sog.part03"
-          ]
+          "id": "rad",
+          "label": "Pre-built LOD, streamed",
+          "url": "scenes/garage/rad/garage-lod.rad",
+          "bytes": 453046752,
+          "chunks": 298
         }
       ]
     },
@@ -77,14 +72,11 @@
       "moveSpeed": 8,
       "sources": [
         {
-          "id": "sog",
-          "label": "SOG · SuperSplat export (74 MB)",
-          "fileName": "tinyplanet.sog",
-          "bytes": 74104156,
-          "parts": [
-            "scenes/tinyplanet/tinyplanet.sog.part00",
-            "scenes/tinyplanet/tinyplanet.sog.part01"
-          ]
+          "id": "rad",
+          "label": "Pre-built LOD, streamed",
+          "url": "scenes/tinyplanet/rad/tinyplanet-lod.rad",
+          "bytes": 259362544,
+          "chunks": 111
         }
       ]
     }
