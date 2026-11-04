@@ -1,16 +1,18 @@
-# Spark Splat Bench
+# Splat Stress Test
 
-A stress-test viewer for large Gaussian splat scenes, built on [Spark](https://sparkjs.dev) 2.4.0 and three.js r180. Open it on any phone, tablet or computer, run the benchmark and send back the JSON report.
+Open a large Gaussian splat scene on any phone, tablet or computer and see how it runs. Built on [Spark](https://sparkjs.dev) 2.4.0 and three.js r180.
 
-## What it measures
-- FPS, frame time p50 / p95 / worst, share of frames slower than 30 FPS
-- GPU time per frame (WebGL timer queries; not available in Safari or most mobile browsers)
-- Splats drawn (current LOD cut), LOD budget (base × scale), LOD updates per second, LOD tree size
-- Load timing: download, decode + LOD build, first frame
-- Estimated splat memory, JS heap (Chrome only), WebGL context loss, and loads that never finished (tab crash / out of memory)
-- Device: GPU string, pixel ratio, drawing-buffer size, Spark's platform default budget
+**Live:** https://yonatangm.github.io/spark-bench/
 
-Settings are in the URL, so a link reproduces a configuration, e.g. `?scene=garage&lod=quick&keep=0&budget=1000000&dpr=1`. Add `&bench=1` to start the benchmark automatically after loading.
+## Controls
+- **Scene**: switch between the scenes below (reloads the page so memory starts clean)
+- **LOD budget**: Auto (Spark's device default), fixed base budgets, a custom base, or All splats (LOD off)
+- **LOD scale**: multiplies the base budget
+- **Resolution**: render pixel ratio
+- Move: drag to look, WASD / arrows, scroll. On touch devices: drag to look and the joystick to move.
+
+## Readout
+Current splats drawn, FPS, time per frame, GPU time (where the browser allows it), the budget, stutters (frames over 50 ms), splat memory, JS memory (Chrome), and how long download, decode and LOD build took. If a previous load crashed the tab, it says so.
 
 ## Scenes
 Both scenes are CC BY 4.0 and were downloaded from SuperSplat:
@@ -31,6 +33,6 @@ python tools/serve.py 8770 --lan    # reachable from phones on the same Wi-Fi
 - `index.html`, `src/` – the app (no build step; import map points at `vendor/`)
 - `scenes/` – catalog (`scenes.json`), split `.sog` parts, per-scene license
 - `reference/spark-2.4.0/` – Spark README, docs and the examples this app follows
-- `tools/` – vendoring, splitting, local server, headless checks
+- `tools/` – vendoring, splitting, local server, headless check
 
 Spark is MIT licensed (World Labs Technologies, Inc.); three.js is MIT licensed.

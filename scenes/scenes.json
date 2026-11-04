@@ -1,5 +1,4 @@
 {
-  "reportIssueUrl": "https://github.com/YonatanGM/spark-bench/issues/new",
   "scenes": [
     {
       "id": "garage",
@@ -30,12 +29,6 @@
         "fov": 80
       },
       "moveSpeed": 1.5,
-      "bench": {
-        "type": "walk",
-        "yawDeg": 55,
-        "pitchDeg": 8,
-        "distance": 1.6
-      },
       "sources": [
         {
           "id": "sog",
@@ -80,11 +73,6 @@
         "fov": 120
       },
       "moveSpeed": 8,
-      "bench": {
-        "type": "orbit",
-        "yawDeg": 70,
-        "dolly": 0.45
-      },
       "sources": [
         {
           "id": "sog",
