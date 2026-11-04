@@ -4,15 +4,22 @@ Open a large Gaussian splat scene on any phone, tablet or computer and see how i
 
 **Live:** https://yonatangm.github.io/spark-bench/
 
-## Controls
-- **Scene**: switch between the scenes below (reloads the page so memory starts clean)
-- **LOD budget**: Auto (Spark's device default), fixed base budgets, a custom base, or All splats (LOD off)
-- **LOD scale**: multiplies the base budget
-- **Resolution**: render pixel ratio
-- Move: drag to look, WASD / arrows, scroll. On touch devices: drag to look and the joystick to move.
+## Settings
+- **Scene** and **LOD tree build** (fast or quality). Changing these reloads the page so memory starts clean.
+- **Budget**: the most splats drawn per frame. Auto uses Spark's device default; there are presets, a custom number, and "All splats, LOD off".
+- **LOD scale** multiplies the budget. **Skip splats smaller than** a pixel size. **Detail toward the screen edges** (Spark's foveation).
+- **Resolution** (pixel ratio), **splat edge cutoff** (less overdraw), **field of view**, **move speed**, on-screen **joystick**.
+- **Copy stats as text** copies the stats panel, device and settings so testers can paste them into a message.
 
-## Readout
-Current splats drawn, FPS, time per frame, GPU time (where the browser allows it), the budget, stutters (frames over 50 ms), splat memory, JS memory (Chrome), and how long download, decode and LOD build took. If a previous load crashed the tab, it says so.
+Move: drag to look, WASD or arrow keys, mouse wheel. On touch screens: drag to look, two fingers or the joystick (from Spark's mobile-joystick example).
+
+## Stats panel
+- Performance: frames per second, average frame time, slowest frame, stutters (frames over 50 ms), GPU time per frame where the browser supports it
+- Splats: drawn now, budget, LOD selection updates, scene total, LOD tree size
+- Memory: splat data (original plus LOD tree), JavaScript heap (Chrome only)
+- Loading: download, decode and LOD tree build times, measured separately
+- Device: GPU, browser, screen, render size, Spark device type and default budget
+- Problems: a previous load that crashed the tab, or a lost WebGL context
 
 ## Scenes
 Both scenes are CC BY 4.0 and were downloaded from SuperSplat:

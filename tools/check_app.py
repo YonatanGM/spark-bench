@@ -10,7 +10,7 @@ scene = next((a for a in sys.argv[1:] if not a.startswith("--")), "garage")
 mobile = "--mobile" in sys.argv
 tag = scene + ("_mobile" if mobile else "")
 logs, errors, res = [], [], {}
-STATE = "({lod: window.splatBench.lodReady, drawn: window.splatBench.mesh.numSplats, t: window.splatBench.t, text: document.getElementById('readout').innerText})"
+STATE = "({lod: window.splatBench.lodReady, drawn: window.splatBench.mesh.numSplats, t: window.splatBench.t, text: document.getElementById('hud-body').innerText})"
 
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe", headless=True, args=["--use-angle=d3d11", "--ignore-gpu-blocklist"])
@@ -27,6 +27,7 @@ with sync_playwright() as p:
     res["loaded"] = pg.evaluate(STATE)
     pg.screenshot(path=str(out / f"{tag}_loaded.png"))
     if not mobile:
+        pg.click("#settings-open"); pg.wait_for_timeout(200)
         for value in ["500000", "full", "auto"]:
             pg.select_option("#budget", value); pg.wait_for_timeout(2500)
             res[f"budget_{value}"] = pg.evaluate(STATE)["drawn"]
@@ -36,9 +37,12 @@ with sync_playwright() as p:
         res["custom_300k_x0.5"] = pg.evaluate(STATE)["drawn"]
         pg.screenshot(path=str(out / f"{tag}_custom.png"))
     else:
-        pg.click("#readout"); pg.wait_for_timeout(400)
+        res["joystick"] = pg.evaluate("!!document.getElementById('mobile-joystick') && getComputedStyle(document.getElementById('mobile-joystick')).display !== 'none'")
+        pg.click("#hud-toggle"); pg.wait_for_timeout(400)
+        res["loaded"]["text"] = pg.evaluate("document.getElementById('hud-body').innerText")
         pg.screenshot(path=str(out / f"{tag}_expanded.png"))
-        res["joystick"] = pg.evaluate("!!document.querySelector('body > div[style*=\"border-radius: 50%\"]') || [...document.body.children].some(e => getComputedStyle(e).borderRadius === '50%')")
+        pg.click("#hud-toggle"); pg.click("#settings-open"); pg.wait_for_timeout(400)
+        pg.screenshot(path=str(out / f"{tag}_settings.png"))
     res["errors"] = errors
     res["logs"] = logs[-12:]
     b.close()

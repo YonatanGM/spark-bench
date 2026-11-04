@@ -17,32 +17,105 @@
   </script>
 </head>
 <body>
-  <header>
-    <select id="scene" aria-label="Scene"></select>
-    <button id="reset" type="button">Reset view</button>
-    <select id="budget" aria-label="LOD budget" title="SparkRenderer.lodSplatCount. All splats turns LOD off.">
-      <option value="auto">Auto LOD</option>
-      <option value="5000000">Base budget: 5M</option>
-      <option value="2500000">Base budget: 2.5M</option>
-      <option value="1000000">Base budget: 1M</option>
-      <option value="500000">Base budget: 500k</option>
-      <option value="250000">Base budget: 250k</option>
-      <option value="custom">Custom base budget…</option>
-      <option value="full">All splats (LOD off)</option>
-    </select>
-    <input id="custom" type="number" min="10000" max="50000000" step="10000" inputmode="numeric" aria-label="Custom base budget" hidden>
-    <label title="SparkRenderer.lodSplatScale: multiplies the base budget">LOD scale <input id="scale" type="range" min="0.1" max="2" step="0.1" value="1"><output id="scale-out">1.0×</output></label>
-    <label title="Render resolution relative to the screen. Lower = fewer pixels to fill.">Resolution
-      <select id="dpr" aria-label="Render resolution"></select>
-    </label>
-  </header>
+  <canvas id="canvas" tabindex="0" aria-label="Splat scene"></canvas>
 
-  <main id="view">
-    <canvas id="canvas" tabindex="0" aria-label="Splat scene"></canvas>
-    <div id="loading" role="status">Loading…</div>
-    <section id="readout" aria-label="Live stats"></section>
-    <div id="credit"></div>
-  </main>
+  <section id="hud" aria-label="Live stats">
+    <button id="hud-toggle" type="button">
+      <span id="hud-summary">Loading</span>
+      <span id="hud-toggle-text">Hide details</span>
+    </button>
+    <div id="hud-body"></div>
+  </section>
+
+  <div id="credit"></div>
+  <div id="hint" aria-hidden="true"></div>
+
+  <div id="loading" role="status">
+    <div class="load-card">
+      <div id="load-title">Starting</div>
+      <div class="bar"><div id="load-bar"></div></div>
+      <div id="load-detail"></div>
+    </div>
+  </div>
+
+  <button id="settings-open" type="button">Settings</button>
+
+  <aside id="panel" hidden aria-label="Settings">
+    <div class="panel-head">
+      <strong>Settings</strong>
+      <button id="panel-close" type="button">Close</button>
+    </div>
+    <p class="note" id="panel-credit"></p>
+
+    <fieldset>
+      <legend>Scene</legend>
+      <label>Scene <select id="scene"></select></label>
+      <label>LOD tree build
+        <select id="lod-quality">
+          <option value="fast">Fast (Spark default)</option>
+          <option value="quality">Quality (slower to build, better coarse levels)</option>
+        </select>
+      </label>
+      <button id="load" type="button">Load scene (reloads the page)</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Level of detail</legend>
+      <label>Budget (most splats drawn per frame)
+        <select id="budget">
+          <option value="auto">Auto</option>
+          <option value="10000000">10 million</option>
+          <option value="5000000">5 million</option>
+          <option value="2500000">2.5 million</option>
+          <option value="1500000">1.5 million</option>
+          <option value="1000000">1 million</option>
+          <option value="500000">500 thousand</option>
+          <option value="250000">250 thousand</option>
+          <option value="custom">Custom number</option>
+          <option value="full">All splats, LOD off</option>
+        </select>
+      </label>
+      <label id="custom-wrap" hidden>Custom budget <input id="custom" type="number" min="10000" max="50000000" step="10000" inputmode="numeric"></label>
+      <label>LOD scale (multiplies the budget) <span class="row"><input id="scale" type="range" min="0.1" max="3" step="0.1"><output id="scale-out"></output></span></label>
+      <label>Skip splats smaller than <span class="row"><input id="minpx" type="range" min="1" max="5" step="0.5"><output id="minpx-out"></output></span></label>
+      <label>Detail toward the screen edges
+        <select id="fovea">
+          <option value="default">Less at the edges (Spark default)</option>
+          <option value="off">Same everywhere</option>
+          <option value="strong">Much less at the edges</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Rendering</legend>
+      <label>Resolution <select id="dpr"></select></label>
+      <label>Splat edge cutoff
+        <select id="stddev">
+          <option value="2.8284">Spark default (widest, most overdraw)</option>
+          <option value="2.2361">Tighter (less overdraw, looks almost the same)</option>
+          <option value="2">Tightest (least overdraw, slightly harder edges)</option>
+        </select>
+      </label>
+      <label>Field of view <span class="row"><input id="fov" type="range" min="30" max="120" step="1"><output id="fov-out"></output></span></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Navigation</legend>
+      <label>Move speed <span class="row"><input id="speed" type="range" min="0.1" max="4" step="0.1"><output id="speed-out"></output></span></label>
+      <label class="check"><input id="joystick" type="checkbox"> On-screen joystick</label>
+      <button id="reset" type="button">Reset view</button>
+      <p class="note">Drag to look. WASD or arrow keys to move, Shift for faster, mouse wheel to move forward. On touch screens: drag to look, two fingers or the joystick to move.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Share results</legend>
+      <button id="copy" type="button">Copy stats as text</button>
+      <p class="note">Copies everything in the stats panel plus device and settings, ready to paste into a message.</p>
+    </fieldset>
+
+    <p class="note" id="versions"></p>
+  </aside>
 
   <script type="module" src="src/app.js"></script>
 </body>
