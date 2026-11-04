@@ -39,13 +39,15 @@ setStage("loading");
 // Count streamed chunks and bytes. PagedSplats fetches chunks on the main
 // thread, so the browser's resource timing sees every request.
 const sourceDir = new URL(source.url, location.href).href.replace(/[^/]*$/, "");
-const net = { chunks: new Set(), bytes: 0, again: 0, againBytes: 0 };
+const net = { chunks: new Set(), bytes: 0, again: 0, againBytes: 0, total: 0, totalBytes: 0, recent: [] };
 performance.setResourceTimingBufferSize?.(10000);
 new PerformanceObserver((list) => {
   for (const e of list.getEntries()) {
     if (!e.name.startsWith(sourceDir)) continue;
     if (!e.name.endsWith(".radc")) continue;
     const size = e.encodedBodySize || e.transferSize || 0;
+    net.total++; net.totalBytes += size;
+    net.recent.push([performance.now(), size]);
     if (net.chunks.has(e.name)) { net.again++; net.againBytes += size; } // fetched before, so it was dropped from memory
     else { net.chunks.add(e.name); net.bytes += size; }
   }
@@ -150,11 +152,12 @@ const pagerState = () => {
 };
 // Count chunks dropped from the pool (Spark evicts least recently used chunks when it is full)
 let heldChunks = new Set(), droppedChunks = 0;
+const droppedRecent = []; // drop times, last 2 s
 function trackDropped() {
   const pager = spark.pager;
   if (!pager) return;
   const now = new Set(pager.pageToSplatsChunk.filter(Boolean).map((e) => e.chunk));
-  for (const c of heldChunks) if (!now.has(c)) droppedChunks++;
+  for (const c of heldChunks) if (!now.has(c)) { droppedChunks++; droppedRecent.push(performance.now()); }
   heldChunks = now;
 }
 
@@ -221,17 +224,20 @@ function statSections(now) {
   ]]);
   S.push(["Splats", [
     ["Original (no LOD)", num(sceneDef.splats)],
+    ["LOD tree", treeNodes ? `${num(treeNodes)} nodes` : "..."],
     ["Drawn now", t.firstFrame ? num(mesh.numSplats) : "..."],
     ["Budget (most drawn)", num((spark.lodSplatCount ?? autoBase) * spark.lodSplatScale)],
     ["LOD updates", `${(cutEvents.length / 2).toFixed(1)} per second`],
   ]]);
-  // Streaming, in reading order: the whole tree, what came down, what is held
+  // Live rates over the last 2 s, totals since the page opened
+  while (net.recent.length && now - net.recent[0][0] > 2000) net.recent.shift();
+  while (droppedRecent.length && now - droppedRecent[0] > 2000) droppedRecent.shift();
+  const dl = net.recent, dlBytes = dl.reduce((a, [, b]) => a + b, 0);
   S.push(["Streaming", [
-    ["LOD tree", `${treeNodes ? `${num(treeNodes)} nodes in ` : ""}${source.chunks} chunks (${mb(source.bytes)})`],
-    ["Downloaded", `${net.chunks.size} of ${source.chunks} chunks (${mb(net.bytes)})`],
+    ["Whole tree", `${source.chunks} chunks, ${mb(source.bytes)}`],
     ["In memory", p ? `${p.resident} of ${p.poolPages} chunks` : "..."],
-    ["Dropped from memory", `${droppedChunks} chunks`, droppedChunks ? "warn" : ""],
-    ["Downloaded again", `${net.again} chunks (${mb(net.againBytes)})`],
+    ["Downloading", `${(dl.length / 2).toFixed(1)} chunks/s, ${(dlBytes / 2 / 1048576).toFixed(1)} MB/s (${net.total} total)`],
+    ["Dropping", `${(droppedRecent.length / 2).toFixed(1)} chunks/s (${droppedChunks} total)`, droppedRecent.length ? "warn" : ""],
     ["Status", p ? (p.busy ? "loading detail" : "idle") : "..."],
   ]]);
   const pool = poolBytes();
