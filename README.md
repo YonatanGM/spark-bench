@@ -15,7 +15,7 @@ One panel on the left holds everything. Tap the top line to show or hide it (it 
 - Device: GPU, browser, screen, render size, CPU threads
 - Problems: a previous load that crashed the tab, or a lost WebGL context
 
-Move: drag to look, WASD or arrow keys, mouse wheel. Touch screens get Spark's on-screen joystick automatically.
+Move: drag to look, WASD or arrow keys, mouse wheel. Touch screens: drag to look around (the scene follows your finger), pinch to move forward or back, two fingers together to slide. These are Spark's own SparkControls gestures; no joystick.
 
 ## Scenes
 Both scenes are CC BY 4.0 and were downloaded from SuperSplat:

@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0b0d10; color: var(--text); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; touch-action: none; outline: none; }
+canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; touch-action: none; outline: none; }
 button, select, input { font: inherit; color: inherit; }
 button { background: #1f262c; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
 button:hover { border-color: #46525b; }
@@ -30,8 +30,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 #credit { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
 #credit a { color: var(--text); }
 
-/* Touch hint, styled after examples/mobile-joystick */
-#hint { position: fixed; z-index: 4; left: 50%; bottom: max(200px, calc(env(safe-area-inset-bottom) + 200px)); transform: translateX(-50%); background: rgba(40, 120, 200, .8); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; text-align: center; pointer-events: none; transition: opacity .6s; max-width: calc(100vw - 32px); }
+/* Touch hint */
+#hint { position: fixed; z-index: 4; left: 50%; bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px)); transform: translateX(-50%); background: rgba(0, 0, 0, .7); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; text-align: center; pointer-events: none; transition: opacity .6s; max-width: calc(100vw - 32px); }
 #hint.fade { opacity: 0; }
 
 /* Loading */
@@ -53,6 +53,4 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 }
 @media (max-width: 640px) {
   #hud { width: auto; right: max(8px, env(safe-area-inset-right)); }
-  /* end above the joystick (140 px + 40 px margin, examples/mobile-joystick) */
-  body.has-joystick #hud-body { max-height: calc(100dvh - 300px); }
 }

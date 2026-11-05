@@ -4,13 +4,13 @@
 // SplatMesh({ url, paged: true }). Spark fetches only the chunks the current
 // view needs, coarse first, into a fixed-size splat pool. This is the same idea
 // SuperSplat uses for large scenes.
-// Other patterns: SparkControls with rotateSpeed x2 (examples/lod), joystick on
-// touch screens (examples/mobile-joystick). Budget and LOD scale controls mirror
+// Navigation is Spark's SparkControls: mouse/keyboard on desktop, and on touch
+// screens one finger to look, pinch to move, two fingers to slide (controls.ts,
+// PointerControls). Budget and LOD scale controls mirror
 // the local experiment viewer (hybrid_web).
 import * as THREE from "three";
 import { SparkRenderer, SplatMesh, SparkControls, isMobile, isIos, isAndroid } from "@sparkjsdev/spark";
 import { createGpuTimer } from "./gpu_timer.js";
-import { initMobileControls, getMobileInput, isMobileDevice } from "./joystick.js";
 
 const $ = (id) => document.getElementById(id);
 const num = (n) => (n == null ? "n/a" : Math.round(n).toLocaleString("en-US"));
@@ -98,19 +98,24 @@ canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); context
 // in-app web views lack it, which would throw inside the render loop.
 if (typeof navigator.getGamepads !== "function") navigator.getGamepads = () => [];
 const controls = new SparkControls({ canvas });
-controls.pointerControls.rotateSpeed *= 2.0; // examples/lod
+const touch = navigator.maxTouchPoints > 0 && matchMedia("(pointer: coarse)").matches;
+if (!touch) controls.pointerControls.rotateSpeed *= 2.0; // examples/lod (mouse look)
+// Touch: make the scene follow the finger like Street View. PointerControls turns
+// rotateSpeed radians per CSS pixel, so use (vertical field of view / canvas height).
+function fitTouchRotate() {
+  if (touch && canvas.clientHeight) controls.pointerControls.rotateSpeed = THREE.MathUtils.degToRad(camera.fov) / canvas.clientHeight;
+}
+new ResizeObserver(fitTouchRotate).observe(canvas);
 const k = sceneDef.moveSpeed ?? 1; // scenes differ in scale (garage ~10 m, planet ~70 units)
 controls.fpsMovement.moveSpeed *= k;
 controls.pointerControls.slideSpeed *= k;
 controls.pointerControls.scrollSpeed *= k;
 
-// Joystick on touch screens, values from examples/mobile-joystick
-const joystick = isMobileDevice();
-if (joystick) {
-  initMobileControls({ joystickSize: 140, knobSize: 60, marginLeft: 40, marginBottom: 40 });
-  document.body.classList.add("has-joystick");
+if (touch) {
+  // Stop iOS Safari's own pinch-zoom from fighting the canvas gestures
+  for (const type of ["gesturestart", "gesturechange"]) document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
   const hint = $("hint");
-  hint.textContent = "Use the joystick to move, drag to look around";
+  hint.textContent = "Drag to look around, pinch to move";
   hint.hidden = false;
   setTimeout(() => hint.classList.add("fade"), 6000);
 }
@@ -306,7 +311,6 @@ function updateLoading(now) {
 }
 
 // ------------------------------------------------------------- main loop
-const move = new THREE.Vector3();
 let last = performance.now();
 renderer.setAnimationLoop(() => {
   const now = performance.now();
@@ -316,11 +320,6 @@ renderer.setAnimationLoop(() => {
   while (frames.length && now - frames[0][0] > 10000) frames.shift();
 
   controls.update(camera);
-  if (joystick) {
-    // examples/mobile-joystick: move along the view direction
-    const input = getMobileInput();
-    if (input.x || input.y) camera.position.add(move.set(input.x, 0, input.y).multiplyScalar((controls.fpsMovement.moveSpeed * dt) / 1000).applyQuaternion(camera.quaternion));
-  }
   gpuTimer.render(() => renderer.render(scene, camera));
 
   if (lastVersion !== null && mesh.mappingVersion !== lastVersion) cutEvents.push(now);
@@ -339,4 +338,4 @@ renderer.setAnimationLoop(() => {
 });
 
 // For the headless check (tools/check_app.py)
-window.splatBench = { spark, mesh, t, net, pagerState, get dropped() { return droppedChunks; } };
+window.splatBench = { spark, mesh, t, net, pagerState, camera, controls, get dropped() { return droppedChunks; } };
